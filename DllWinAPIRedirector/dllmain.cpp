@@ -8,6 +8,11 @@ WCHAR g_szExePath[MAX_PATH];
 WCHAR g_szDllPath[MAX_PATH];
 HMODULE g_hModule = NULL;
 
+std::unique_ptr<WinAPIRedirector> WinAPIRedirector::s_winAPIRedirector = nullptr;
+
+#define SOURCE_DIR_PATH L"C:\\Users\\lenovo\\Documents\\Important"
+#define REDIRECT_DIR_PATH L"C:\\Users\\Public\\Documents\\Important"
+
 BOOL ProcessAttach(HMODULE hDll)
 {
     LONG error = AttachDetours();
@@ -51,21 +56,22 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
         GetModuleFileName(hModule, g_szDllPath, MAX_PATH);
 
-        //if (NULL != wcsistr(g_szExePath, L"TestCase"))
         {
-            MessageBoxW(NULL, g_szExePath, L"start", MB_OK | MB_SYSTEMMODAL);
+            //MessageBoxW(NULL, g_szExePath, L"start", MB_OK | MB_SYSTEMMODAL);
         }
-
         DetourRestoreAfterWith();
-        BOOL boRet = ProcessAttach(hModule);
+        //WinAPIRedirector::Init(SOURCE_DIR_PATH, REDIRECT_DIR_PATH);
+        BOOL boRet = WinAPIRedirector::Init(SOURCE_DIR_PATH, REDIRECT_DIR_PATH);
         return boRet;
     }
     case DLL_PROCESS_DETACH:
     {
-        MessageBoxW(NULL, g_szExePath, L"Stop", MB_OK | MB_SYSTEMMODAL);
+        //MessageBoxW(NULL, g_szExePath, L"Stop", MB_OK | MB_SYSTEMMODAL);
 
-        BOOL boRet = ProcessDetach(hModule);
-        return boRet;
+        //BOOL boRet = ProcessDetach(hModule);
+        WinAPIRedirector::Release();
+
+        return true;
     }
     case DLL_THREAD_ATTACH:
     case DLL_THREAD_DETACH:

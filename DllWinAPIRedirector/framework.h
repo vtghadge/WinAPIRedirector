@@ -10,3 +10,5 @@
 #include <stdarg.h>
 #include <strsafe.h>
 #include <string>
+#include <map>
+#include <memory>

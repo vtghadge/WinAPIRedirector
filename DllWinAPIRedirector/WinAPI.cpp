@@ -1,7 +1,11 @@
 #include "pch.h"
 #include "detours.h"
 #include "Common.h"
+#include "WinAPI.h"
 
+
+#define ATTACH(x)       DetAttach(&(PVOID&)Real_##x,Mine_##x,#x)
+#define DETACH(x)       DetDetach(&(PVOID&)Real_##x,Mine_##x,#x)
 
 HANDLE
 (WINAPI *Real_CreateFileW)(
@@ -57,62 +61,6 @@ Mine_CreateFileA(
     return Real_CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 }
 
-static const char* DetRealName(const char* psz)
-{
-    const char* pszBeg = psz;
-    // Move to end of name.
-    while (*psz) {
-        psz++;
-    }
-    // Move back through A-Za-z0-9 names.
-    while (psz > pszBeg &&
-        ((psz[-1] >= 'A' && psz[-1] <= 'Z') ||
-            (psz[-1] >= 'a' && psz[-1] <= 'z') ||
-            (psz[-1] >= '0' && psz[-1] <= '9'))) {
-        psz--;
-    }
-    return psz;
-}
-
-static VOID Dump(PBYTE pbBytes, LONG nBytes, PBYTE pbTarget)
-{
-    CHAR szBuffer[256];
-    PCHAR pszBuffer = szBuffer;
-
-    for (LONG n = 0; n < nBytes; n += 12) {
-        pszBuffer += StringCchPrintfA(pszBuffer, sizeof(szBuffer), "  %p: ", pbBytes + n);
-        for (LONG m = n; m < n + 12; m++) {
-            if (m >= nBytes) {
-                pszBuffer += StringCchPrintfA(pszBuffer, sizeof(szBuffer), "   ");
-            }
-            else {
-                pszBuffer += StringCchPrintfA(pszBuffer, sizeof(szBuffer), "%02x ", pbBytes[m]);
-            }
-        }
-        if (n == 0) {
-            pszBuffer += StringCchPrintfA(pszBuffer, sizeof(szBuffer), "[%p]", pbTarget);
-        }
-        pszBuffer += StringCchPrintfA(pszBuffer, sizeof(szBuffer), "\n");
-    }
-}
-
-static VOID Decode(PBYTE pbCode, LONG nInst)
-{
-    PBYTE pbSrc = pbCode;
-    PBYTE pbEnd;
-    PBYTE pbTarget;
-    for (LONG n = 0; n < nInst; n++) {
-        pbTarget = NULL;
-        pbEnd = (PBYTE)DetourCopyInstruction(NULL, NULL, (PVOID)pbSrc, (PVOID*)&pbTarget, NULL);
-        Dump(pbSrc, (int)(pbEnd - pbSrc), pbTarget);
-        pbSrc = pbEnd;
-
-        if (pbTarget != NULL) {
-            break;
-        }
-    }
-}
-
 VOID DetAttach(PVOID* ppvReal, PVOID pvMine, const char* psz)
 {
     PVOID pvReal = NULL;
@@ -122,26 +70,14 @@ VOID DetAttach(PVOID* ppvReal, PVOID pvMine, const char* psz)
 
     LONG l = DetourAttach(ppvReal, pvMine);
     if (l != 0) {
-        DbgViewf(L"Attach failed: `%s': error %d\n", DetRealName(psz), l);
-        Decode((PBYTE)*ppvReal, 3);
+        DbgViewf(L"Attach failed: error %d\n", l);
     }
 }
 
 VOID DetDetach(PVOID* ppvReal, PVOID pvMine, const char* psz)
 {
-    LONG l = DetourDetach(ppvReal, pvMine);
-    if (l != 0) {
-#if 0
-        Syelog(SYELOG_SEVERITY_NOTICE,
-            "Detach failed: `%s': error %d\n", DetRealName(psz), l);
-#else
-        (void)psz;
-#endif
-    }
+    DetourDetach(ppvReal, pvMine);
 }
-
-#define ATTACH(x)       DetAttach(&(PVOID&)Real_##x,Mine_##x,#x)
-#define DETACH(x)       DetDetach(&(PVOID&)Real_##x,Mine_##x,#x)
 
 LONG AttachDetours(VOID)
 {
@@ -183,4 +119,92 @@ LONG DetachDetours(VOID)
         return error;
     }
     return 0;
+}
+
+bool WinAPIRedirector::Init(std::wstring srcDirPath, std::wstring redirectDirPath)
+{
+    //
+    //	Check source directory existance.
+    //
+    if (-1 == _waccess(srcDirPath.c_str(), 00))
+    {
+        WCHAR szError[MAX_PATH];
+        StringCchPrintf(szError, ARRAYSIZE(szError), L"Source directory path(%s) not found", srcDirPath.c_str());
+        MessageBoxW(NULL, szError, L"ERROR", MB_OK | MB_SYSTEMMODAL);
+        DbgViewf(L"(%s)\n", szError);
+        return false;
+    }
+
+    //
+    //	Check redirected directory existance.
+    //
+    if (-1 == _waccess(redirectDirPath.c_str(), 00))
+    {
+        WCHAR szError[MAX_PATH];
+        StringCchPrintf(szError, ARRAYSIZE(szError), L"Redirected directory path(%s) not found", redirectDirPath.c_str());
+        MessageBoxW(NULL, szError, L"ERROR", MB_OK | MB_SYSTEMMODAL);
+        DbgViewf(L"(%s)\n", szError);
+        return false;
+    }
+
+    LONG error = AttachDetours();
+    if (error != NO_ERROR)
+    {
+        WCHAR szError[MAX_PATH];
+        StringCchPrintf(szError, ARRAYSIZE(szError), L"Error attaching detours: %d", errno);
+        MessageBoxW(NULL, szError, L"ERROR", MB_OK | MB_SYSTEMMODAL);
+        DbgViewf(L"Error attaching detours: %d\n", error);
+        return false;
+    }
+
+    if (nullptr == s_winAPIRedirector)
+    {
+        //s_winAPIRedirector = std::make_unique<WinAPIRedirector>(srcDirPath, redirectDirPath);
+        s_winAPIRedirector.reset(new WinAPIRedirector(srcDirPath, redirectDirPath));
+    }
+
+    return true;
+}
+
+void WinAPIRedirector::Release()
+{
+
+    LONG error = DetachDetours();
+    if (error != NO_ERROR)
+    {
+        WCHAR szError[MAX_PATH];
+        StringCchPrintf(szError, ARRAYSIZE(szError), L"Error detaching detours: %d", errno);
+        MessageBoxW(NULL, szError, L"ERROR", MB_OK | MB_SYSTEMMODAL);
+        DbgViewf(L"Error detaching detours: %d\n", error);
+    }
+
+    if (s_winAPIRedirector)
+    {
+        s_winAPIRedirector.reset(nullptr);
+    }
+}
+
+WinAPIRedirector* WinAPIRedirector::GetInstance()
+{
+    return s_winAPIRedirector.get();
+}
+
+WinAPIRedirector::WinAPIRedirector(std::wstring srcDirPath, std::wstring redirectedDirPath):m_srcDirPath(srcDirPath), m_redirectedDirPath(redirectedDirPath)
+{
+    InitializeCriticalSection(&m_handleInfoLock);
+}
+
+WinAPIRedirector::~WinAPIRedirector()
+{
+    DeleteCriticalSection(&m_handleInfoLock);
+}
+
+void WinAPIRedirector::Lock()
+{
+    EnterCriticalSection(&m_handleInfoLock);
+}
+
+void WinAPIRedirector::Unlock()
+{
+    LeaveCriticalSection(&m_handleInfoLock);
 }
