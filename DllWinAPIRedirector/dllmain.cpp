@@ -57,18 +57,17 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         GetModuleFileName(hModule, g_szDllPath, MAX_PATH);
 
         {
-            //MessageBoxW(NULL, g_szExePath, L"start", MB_OK | MB_SYSTEMMODAL);
+        //    MessageBoxW(NULL, g_szExePath, L"start", MB_OK | MB_SYSTEMMODAL);
         }
         DetourRestoreAfterWith();
-        //WinAPIRedirector::Init(SOURCE_DIR_PATH, REDIRECT_DIR_PATH);
         BOOL boRet = WinAPIRedirector::Init(SOURCE_DIR_PATH, REDIRECT_DIR_PATH);
         return boRet;
     }
     case DLL_PROCESS_DETACH:
     {
+        g_iDetach = 1;
         //MessageBoxW(NULL, g_szExePath, L"Stop", MB_OK | MB_SYSTEMMODAL);
 
-        //BOOL boRet = ProcessDetach(hModule);
         WinAPIRedirector::Release();
 
         return true;

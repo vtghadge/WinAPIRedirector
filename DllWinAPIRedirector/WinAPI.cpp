@@ -2,8 +2,10 @@
 #include "detours.h"
 #include "Common.h"
 #include "WinAPI.h"
+#include "ProcessInfo.h"
 
 
+int g_iDetach = 0;
 #define ATTACH(x)       DetAttach(&(PVOID&)Real_##x,Mine_##x,#x)
 #define DETACH(x)       DetDetach(&(PVOID&)Real_##x,Mine_##x,#x)
 
@@ -109,6 +111,11 @@ Mine_CloseHandle(
     _In_ _Post_ptr_invalid_ HANDLE hObject
 )
 {
+    if (g_iDetach)
+    {
+        return Real_CloseHandle(hObject);
+    }
+
     WinAPIRedirector::GetInstance()->OnHandleClose(hObject);
 
     return Real_CloseHandle(hObject);
@@ -142,6 +149,7 @@ LONG AttachDetours(VOID)
 
     ATTACH(CreateFileW);
     ATTACH(CreateFileA);
+    ATTACH(CloseHandle);
 
     PVOID* ppbFailedPointer = NULL;
     LONG error = DetourTransactionCommitEx(&ppbFailedPointer);
@@ -216,12 +224,13 @@ bool WinAPIRedirector::Init(std::wstring srcDirPath, std::wstring redirectDirPat
         s_winAPIRedirector.reset(new WinAPIRedirector(srcDirPath, redirectDirPath));
     }
 
+    WinAPIRedirector::GetInstance()->GetProcessInfo().InitProcessInfo();
+
     return true;
 }
 
 void WinAPIRedirector::Release()
 {
-
     LONG error = DetachDetours();
     if (error != NO_ERROR)
     {
@@ -252,6 +261,15 @@ WinAPIRedirector::WinAPIRedirector(std::wstring srcDirPath, std::wstring redirec
 WinAPIRedirector::~WinAPIRedirector()
 {
     DeleteCriticalSection(&m_handleInfoLock);
+}
+
+ProcessInfo& WinAPIRedirector::GetProcessInfo()
+{
+    return m_processInfo;
+}
+
+WinAPIRedirector::HandleInfo::HandleInfo()
+{
 }
 
 WinAPIRedirector::HandleInfo::HandleInfo(std::wstring originalPath, std::wstring redirectedPath) :m_originalPath(originalPath), m_redirectedPath(redirectedPath)

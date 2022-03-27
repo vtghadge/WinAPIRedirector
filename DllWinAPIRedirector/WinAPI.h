@@ -1,4 +1,5 @@
 #pragma once
+#include "ProcessInfo.h"
 
 VOID DetAttach(PVOID* ppvReal, PVOID pvMine, const char* psz);
 
@@ -7,6 +8,8 @@ VOID DetDetach(PVOID* ppvReal, PVOID pvMine, const char* psz);
 LONG AttachDetours(VOID);
 
 LONG DetachDetours(VOID);
+
+extern int g_iDetach;
 
 class WinAPIRedirector
 {
@@ -23,6 +26,8 @@ public:
 	bool OnHandleClose(HANDLE hfile);
 	bool IsRedirectedHandle(HANDLE hFile);
 
+	ProcessInfo& GetProcessInfo();
+
 private:
 	WinAPIRedirector(std::wstring srcDirPath, std::wstring redirectedDirPath);
 
@@ -34,6 +39,7 @@ private:
 		std::wstring m_originalPath;
 		std::wstring m_redirectedPath;
 
+		HandleInfo();
 		HandleInfo(std::wstring originalPath, std::wstring redirectedPath);
 	};
 
@@ -41,6 +47,7 @@ private:
 	CRITICAL_SECTION m_handleInfoLock;
 
 	static std::unique_ptr<WinAPIRedirector> s_winAPIRedirector;
+	ProcessInfo m_processInfo;
 
 private:
 
