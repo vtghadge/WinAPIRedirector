@@ -17,6 +17,12 @@ public:
 
 	~WinAPIRedirector();
 
+	bool IsOperationInterested(std::wstring& path, DWORD dwDesiredAccess, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, std::wstring& redirectedPath);
+
+	bool OnHandleCreation(HANDLE hfile, std::wstring& originalPath, std::wstring& redirectedPath);
+	bool OnHandleClose(HANDLE hfile);
+	bool IsRedirectedHandle(HANDLE hFile);
+
 private:
 	WinAPIRedirector(std::wstring srcDirPath, std::wstring redirectedDirPath);
 
@@ -25,8 +31,10 @@ private:
 
 	struct HandleInfo
 	{
-		std::wstring originalPath;
-		std::wstring redirectedPath;
+		std::wstring m_originalPath;
+		std::wstring m_redirectedPath;
+
+		HandleInfo(std::wstring originalPath, std::wstring redirectedPath);
 	};
 
 	std::map<HANDLE, HandleInfo> m_handleInfoMap;
@@ -38,5 +46,7 @@ private:
 
 	void Lock();
 	void Unlock();
+
+	bool CheckIfSourcePathLocation(std::wstring& path, std::wstring& redirectedPath);
 
 };

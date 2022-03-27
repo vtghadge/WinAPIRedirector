@@ -42,3 +42,82 @@ bool StringCompareNoCase(const std::string& a, const std::string& b)
             return tolower(a) == tolower(b);
         });
 }
+
+bool FileExists(const std::wstring& path)
+{
+    WIN32_FIND_DATA findFileData;
+    HANDLE handle = FindFirstFile(path.c_str(), &findFileData);
+
+    bool found = handle != INVALID_HANDLE_VALUE;
+
+    if (found)
+    {
+        FindClose(handle);
+    }
+
+    return found;
+}
+
+void ToLowerCase(std::wstring& path)
+{
+    std::transform(path.begin(), path.end(), path.begin(), [](wchar_t c) { return std::tolower(c); });
+}
+
+std::wstring ConvertStringToWstring(std::string& string)
+{
+    int len;
+    int stringLen = (int)string.length() + 1;
+    std::wstring convertedString;
+
+    len = MultiByteToWideChar(CP_ACP, 0, string.c_str(), stringLen, 0, 0);
+    if (0 == len)
+    {
+        return std::wstring();
+    }
+
+    convertedString.resize(len);
+
+    len = MultiByteToWideChar(CP_ACP, 0, string.c_str(), stringLen, &convertedString[0], len);
+    if (0 == len)
+    {
+        return std::wstring();
+    }
+
+    convertedString.erase(convertedString.end() - 1);
+
+    return convertedString;
+}
+
+std::string ConvertWstringToString(std::wstring& wstring)
+{
+    int len;
+    int stringLen = (int)wstring.length() + 1;
+    std::string convertedString;
+
+    len = WideCharToMultiByte(CP_ACP, 0, wstring.c_str(), stringLen, 0, 0, 0, 0);
+    if (0 == len)
+    {
+        return std::string();
+    }
+
+    convertedString.resize((len / sizeof(CHAR)));
+
+    len = WideCharToMultiByte(CP_ACP, 0, wstring.c_str(), stringLen, &convertedString[0], len, 0, 0);
+    if (0 == len)
+    {
+        return std::string();
+    }
+
+    convertedString.erase(convertedString.end() - 1);
+
+    return convertedString;
+}
+
+void ExtractProcessName(std::wstring &processPath)
+{
+    size_t pos = processPath.find_last_of(L"\\");
+    if (pos != std::wstring::npos)
+    {
+        processPath.erase(0, pos + 1);
+    }
+}

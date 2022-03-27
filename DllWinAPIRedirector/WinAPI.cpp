@@ -29,6 +29,11 @@ HANDLE
     _In_opt_ HANDLE hTemplateFile
 ) = CreateFileA;
 
+BOOL
+(WINAPI *Real_CloseHandle)(
+    _In_ _Post_ptr_invalid_ HANDLE hObject
+) = CloseHandle;
+
 HANDLE
 WINAPI
 Mine_CreateFileW(
@@ -41,8 +46,25 @@ Mine_CreateFileW(
     _In_opt_ HANDLE hTemplateFile
 )
 {
-    MessageBoxW(NULL, lpFileName, L"Mine_CreateFileW", MB_OK | MB_SYSTEMMODAL);
-    return Real_CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    HANDLE hFile;
+    std::wstring path = lpFileName;
+    std::wstring redirectedPath;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(path, dwDesiredAccess, dwCreationDisposition, dwFlagsAndAttributes, redirectedPath);
+    if (!boInterested)
+    {
+        return Real_CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    }
+
+    MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_CreateFileW", MB_OK | MB_SYSTEMMODAL);
+    hFile = Real_CreateFileW(redirectedPath.c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    if (INVALID_HANDLE_VALUE == hFile)
+    {
+        return hFile;
+    }
+
+    WinAPIRedirector::GetInstance()->OnHandleCreation(hFile, path, redirectedPath);
+    return hFile;
 }
 
 HANDLE
@@ -57,8 +79,39 @@ Mine_CreateFileA(
     _In_opt_ HANDLE hTemplateFile
 )
 {
-    MessageBoxA(NULL, lpFileName, "Mine_CreateFileA", MB_OK | MB_SYSTEMMODAL);
-    return Real_CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    HANDLE hFile;
+    std::string pathA = lpFileName;
+    std::wstring pathW = ConvertStringToWstring(pathA);
+    std::wstring redirectedPathW;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(pathW, dwDesiredAccess, dwCreationDisposition, dwFlagsAndAttributes, redirectedPathW);
+    if (!boInterested)
+    {
+        return Real_CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    }
+    std::string redirectedPathA = ConvertWstringToString(redirectedPathW);
+
+    MessageBoxA(NULL, redirectedPathA.c_str(), "Mine_CreateFileA", MB_OK | MB_SYSTEMMODAL);
+
+    hFile = Real_CreateFileA(redirectedPathA.c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    if (INVALID_HANDLE_VALUE == hFile)
+    {
+        return hFile;
+    }
+
+    WinAPIRedirector::GetInstance()->OnHandleCreation(hFile, pathW, redirectedPathW);
+    return hFile;
+}
+
+BOOL
+WINAPI
+Mine_CloseHandle(
+    _In_ _Post_ptr_invalid_ HANDLE hObject
+)
+{
+    WinAPIRedirector::GetInstance()->OnHandleClose(hObject);
+
+    return Real_CloseHandle(hObject);
 }
 
 VOID DetAttach(PVOID* ppvReal, PVOID pvMine, const char* psz)
@@ -126,7 +179,7 @@ bool WinAPIRedirector::Init(std::wstring srcDirPath, std::wstring redirectDirPat
     //
     //	Check source directory existance.
     //
-    if (-1 == _waccess(srcDirPath.c_str(), 00))
+    if (!FileExists(srcDirPath))
     {
         WCHAR szError[MAX_PATH];
         StringCchPrintf(szError, ARRAYSIZE(szError), L"Source directory path(%s) not found", srcDirPath.c_str());
@@ -138,7 +191,7 @@ bool WinAPIRedirector::Init(std::wstring srcDirPath, std::wstring redirectDirPat
     //
     //	Check redirected directory existance.
     //
-    if (-1 == _waccess(redirectDirPath.c_str(), 00))
+    if (!FileExists(redirectDirPath))
     {
         WCHAR szError[MAX_PATH];
         StringCchPrintf(szError, ARRAYSIZE(szError), L"Redirected directory path(%s) not found", redirectDirPath.c_str());
@@ -191,12 +244,71 @@ WinAPIRedirector* WinAPIRedirector::GetInstance()
 
 WinAPIRedirector::WinAPIRedirector(std::wstring srcDirPath, std::wstring redirectedDirPath):m_srcDirPath(srcDirPath), m_redirectedDirPath(redirectedDirPath)
 {
+    ToLowerCase(m_srcDirPath);
+    ToLowerCase(redirectedDirPath);
     InitializeCriticalSection(&m_handleInfoLock);
 }
 
 WinAPIRedirector::~WinAPIRedirector()
 {
     DeleteCriticalSection(&m_handleInfoLock);
+}
+
+WinAPIRedirector::HandleInfo::HandleInfo(std::wstring originalPath, std::wstring redirectedPath) :m_originalPath(originalPath), m_redirectedPath(redirectedPath)
+{
+}
+
+bool WinAPIRedirector::IsOperationInterested(std::wstring& path, DWORD dwDesiredAccess, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, std::wstring &redirectedPath)
+{
+    if (false == CheckIfSourcePathLocation(path, redirectedPath))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool WinAPIRedirector::OnHandleCreation(HANDLE hfile, std::wstring& originalPath, std::wstring& redirectedPath)
+{
+    if (IsRedirectedHandle(hfile))
+    {
+        //  Handle already present.
+        return false;
+    }
+
+    Lock();
+    m_handleInfoMap[hfile] = HandleInfo(originalPath, redirectedPath);
+    Unlock();
+
+    return true;
+}
+
+bool WinAPIRedirector::OnHandleClose(HANDLE hfile)
+{
+    Lock();
+    auto it = m_handleInfoMap.find(hfile);
+    if (it == m_handleInfoMap.end())
+    {
+        Unlock();
+        return false;
+    }
+    m_handleInfoMap.erase(hfile);
+    Unlock();
+    return true;
+}
+
+bool WinAPIRedirector::IsRedirectedHandle(HANDLE hFile)
+{
+    Lock();
+    auto it = m_handleInfoMap.find(hFile);
+    if (it != m_handleInfoMap.end())
+    {
+        Unlock();
+        return true;
+    }
+
+    Unlock();
+    return false;
 }
 
 void WinAPIRedirector::Lock()
@@ -207,4 +319,40 @@ void WinAPIRedirector::Lock()
 void WinAPIRedirector::Unlock()
 {
     LeaveCriticalSection(&m_handleInfoLock);
+}
+
+bool WinAPIRedirector::CheckIfSourcePathLocation(std::wstring& path, std::wstring &redirectedPath)
+{
+    if (path.length() < m_srcDirPath.length())
+    {
+        return false;
+    }
+
+    std::wstring tempPath = path;
+    ToLowerCase(tempPath);
+
+    size_t pos = tempPath.find(m_srcDirPath);
+    if (0 != pos)
+    {
+        return false;
+    }
+
+    if (tempPath.length() == m_srcDirPath.length())
+    {
+        //  Root location is accessed.
+        redirectedPath = m_redirectedDirPath;
+        return true;
+    }
+
+    if ('\\' != tempPath[m_srcDirPath.length()])
+    {
+        return false;
+    }
+
+    redirectedPath = m_redirectedDirPath;
+    size_t relativePathLen = tempPath.length() - m_srcDirPath.length();
+    std::wstring relativePath(tempPath.substr(m_srcDirPath.length(), relativePathLen));
+    redirectedPath += relativePath;
+
+    return true;
 }

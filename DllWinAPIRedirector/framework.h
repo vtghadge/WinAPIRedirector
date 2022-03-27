@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <strsafe.h>
+#include <Psapi.h>
 #include <string>
 #include <map>
 #include <memory>
+#include <algorithm>
