@@ -3,7 +3,6 @@
 
 #include "pch.h"
 
-
 #pragma pack()
 typedef struct tagFILTER_MESSAGE_IMP
 {
@@ -23,7 +22,7 @@ void ProcessNotification::Create()
 {
     if (nullptr == s_processNotification)
     {
-        s_processNotification.reset(new ProcessNotification(MAX_THREAD_COUNT, MAX_REQUEST_COUNT));
+        s_processNotification.reset(new ProcessNotification(MAX_THREAD_COUNT));
     }
 }
 
@@ -32,17 +31,10 @@ void ProcessNotification::Release()
     s_processNotification.reset(nullptr);
 }
 
-ProcessNotification::ProcessNotification(ULONG ulThreadCount, ULONG ulRequestCount) :m_ulThreadCount(ulThreadCount), m_ulRequestCount(ulRequestCount)
+ProcessNotification::ProcessNotification(ULONG ulThreadCount) :m_ulThreadCount(ulThreadCount)
 {
-	m_hThreadStopEvent = NULL;
-	m_hPort = INVALID_HANDLE_VALUE;
-	m_hCompletionPort = INVALID_HANDLE_VALUE;
-	m_arrhThreads = new HANDLE[ulThreadCount];
-
-	for (ULONG i = 0; i < m_ulThreadCount; i++)
-	{
-		m_arrhThreads[i] = NULL;
-	}
+	m_hPort = NULL;
+	m_hCompletionPort = NULL;
 
 	GetWorkingDirPathW(m_workingDir, true);
 	m_infPath = m_workingDir;
@@ -51,16 +43,17 @@ ProcessNotification::ProcessNotification(ULONG ulThreadCount, ULONG ulRequestCou
 
 ProcessNotification::~ProcessNotification()
 {
-	for (ULONG i = 0; i < m_ulThreadCount; i++)
+}
+
+BOOL __stdcall ProcessNotification::CtrlCHandler(DWORD fdwCtrlType)
+{
+	if (fdwCtrlType == CTRL_C_EVENT || fdwCtrlType == CTRL_CLOSE_EVENT)
 	{
-		if (NULL != m_arrhThreads[i])
-		{
-			CloseHandle(m_arrhThreads[i]);
-			m_arrhThreads[i] = NULL;
-		}
+		wprintf(L"CtrlCHandler: Quit console window event received\n");
+		ProcessNotification::GetInstance()->DeinitSystem();
 	}
 
-	delete[]m_arrhThreads;
+	return FALSE;
 }
 
 bool ProcessNotification::InitSystem()
@@ -74,12 +67,6 @@ bool ProcessNotification::InitSystem()
 		//	do not return.
 	}
 
-	m_hThreadStopEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
-	if (NULL == m_hThreadStopEvent)
-	{
-		return false;
-	}
-
 	//	Install driver.
 	Install(m_infPath);
 
@@ -88,7 +75,6 @@ bool ProcessNotification::InitSystem()
 	if (false == boRet)
 	{
 		Uninstall(m_infPath);
-		CloseHandle(m_hThreadStopEvent);
 		return false;
 	}
 
@@ -98,7 +84,6 @@ bool ProcessNotification::InitSystem()
 		wprintf(L"InitSystem: InitThreadPool failed.\n");
 		StopDriver();
 		Uninstall(m_infPath);
-		CloseHandle(m_hThreadStopEvent);
 		return false;
 	}
 
@@ -112,20 +97,7 @@ bool ProcessNotification::DeinitSystem()
 	DeinitThreadPool();
 	StopDriver();
 	Uninstall(m_infPath);
-	CloseHandle(m_hThreadStopEvent);
-	m_hThreadStopEvent = NULL;
 	return false;
-}
-
-BOOL __stdcall ProcessNotification::CtrlCHandler(DWORD fdwCtrlType)
-{
-	if (fdwCtrlType == CTRL_C_EVENT || fdwCtrlType == CTRL_CLOSE_EVENT)
-	{
-		wprintf(L"CtrlCHandler, quit console window event received");
-		ProcessNotification::GetInstance()->DeinitSystem();
-	}
-
-	return FALSE;
 }
 
 DWORD __stdcall ProcessNotification::WorkerThread(void* parameter)
@@ -134,16 +106,6 @@ DWORD __stdcall ProcessNotification::WorkerThread(void* parameter)
 
 	ProcessNotification::GetInstance()->MessageLoop();
 	return 0;
-}
-
-void ProcessNotification::SignalThreadStopEvent()
-{
-	SetEvent(m_hThreadStopEvent);
-}
-
-void ProcessNotification::WaitForThreadStopEvent()
-{
-	WaitForSingleObject(m_hThreadStopEvent, INFINITE);
 }
 
 bool ProcessNotification::MessageLoop()
@@ -232,37 +194,14 @@ bool ProcessNotification::InitThreadPool()
 
 	for (ULONG iIndex = 0; iIndex < m_ulThreadCount; iIndex++)
 	{
-		m_arrhThreads[iIndex] = CreateThread(NULL, 0, this->WorkerThread, NULL, CREATE_SUSPENDED, NULL);
-		if (NULL == m_arrhThreads[iIndex])
+		HANDLE hThread = CreateThread(NULL, 0, this->WorkerThread, NULL, 0, NULL);
+		if (NULL == hThread)
 		{
-			if (iIndex > 0)
-			{
-				for (int iIttr = iIndex - 1; iIttr >= 0; iIttr--)
-				{
-					TerminateThread(m_arrhThreads[iIttr], 0);
-				}
-
-				DWORD dwRetVal = WaitForMultipleObjects(iIndex, m_arrhThreads, TRUE, INFINITE);
-				if (WAIT_FAILED == dwRetVal)
-				{
-					//	Do not return.
-				}
-
-				//	Release thread handles in reverse order.
-				for (int iIttr = iIndex - 1; iIttr >= 0; iIttr--)
-				{
-					CloseHandle(m_arrhThreads[iIttr]);
-					m_arrhThreads[iIttr] = NULL;
-				}
-			}
-
-			CloseHandle(m_hPort);
-			m_hPort = NULL;
-
-			CloseHandle(m_hCompletionPort);
-			m_hCompletionPort = NULL;
-			return false;
+			hResult = HRESULT_FROM_WIN32(GetLastError());
+			break;
 		}
+
+		m_Threads.push_back(hThread);
 
 		buffers.push_back(std::vector<BYTE>(sizeof(FILTER_MESSAGE_IMP), 0));
 		FILTER_MESSAGE_IMP* pMessageInternal = reinterpret_cast<FILTER_MESSAGE_IMP*>(&(*buffers.rbegin())[0]);
@@ -270,35 +209,46 @@ bool ProcessNotification::InitThreadPool()
 		hResult = FilterGetMessage(m_hPort, &pMessageInternal->Message.MessageHeader, FIELD_OFFSET(FILTER_MESSAGE_IMP, Ovlp), &pMessageInternal->Ovlp);
 		if (hResult != HRESULT_FROM_WIN32(ERROR_IO_PENDING))
 		{
-			//	TODO: cleanup and return.
-			free(pMessageInternal);
-			return false;
+			break;
+		}
+		else
+		{
+			hResult = S_OK;
 		}
 	}
-	m_buffers.swap(buffers);
-
-	for (ULONG iIndex = 0; iIndex < m_ulThreadCount; iIndex++)
+	if (FAILED(hResult))
 	{
-		ResumeThread(m_arrhThreads[iIndex]);
+		DeinitThreadPool();
+		return false;
 	}
+
+	m_Buffers.swap(buffers);
 
 	return true;
 }
 
 bool ProcessNotification::DeinitThreadPool()
 {
+	if (NULL == m_hCompletionPort)
+	{
+		return false;
+	}
+
 	PostQueuedCompletionStatus(m_hCompletionPort, 0, (DWORD)NULL, NULL);
 
 	CloseHandle(m_hCompletionPort);
 
-	WaitForMultipleObjects(m_ulThreadCount, m_arrhThreads, TRUE, INFINITE);
-	for (ULONG iIndex = 0; iIndex < m_ulThreadCount; iIndex++)
+	if (m_Threads.size() > 0)
 	{
-		CloseHandle(m_arrhThreads[iIndex]);
-		m_arrhThreads[iIndex] = NULL;
+		WaitForMultipleObjects((DWORD)m_Threads.size(), &m_Threads[0], TRUE, INFINITE);
+		for (ULONG iIndex = 0; iIndex < m_Threads.size(); iIndex++)
+		{
+			CloseHandle(m_Threads[iIndex]);
+		}
+		m_Threads.clear();
+		m_Buffers.clear();
 	}
 
-	m_buffers.clear();
 	m_hCompletionPort = NULL;
 
 	CloseHandle(m_hPort);
@@ -306,7 +256,6 @@ bool ProcessNotification::DeinitThreadPool()
 
 	return true;
 }
-
 
 int wmain()
 {

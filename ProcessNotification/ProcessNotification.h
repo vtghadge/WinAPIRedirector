@@ -1,7 +1,6 @@
 #pragma once
 
-#define MAX_THREAD_COUNT	1
-#define MAX_REQUEST_COUNT	1
+#define MAX_THREAD_COUNT	3
 
 class ProcessNotification
 {
@@ -12,35 +11,29 @@ public:
 
 	~ProcessNotification();
 
+	static BOOL WINAPI CtrlCHandler(DWORD fdwCtrlType);
+
 	bool InitSystem();
 	bool DeinitSystem();
+
+	static DWORD WINAPI WorkerThread(void* parameter);
 	bool MessageLoop();
 
-	static BOOL WINAPI CtrlCHandler(DWORD fdwCtrlType);
-	static DWORD WINAPI WorkerThread(void* parameter);
-
-	void SignalThreadStopEvent();
-	void WaitForThreadStopEvent();
-
 private:
-	ProcessNotification(ULONG ulThreadCount, ULONG ulRequestCount);
+	ProcessNotification(ULONG ulThreadCount);
 
 	bool InitThreadPool();
 	bool DeinitThreadPool();
-
 
 private:
 	HANDLE m_hPort;
 	HANDLE m_hCompletionPort;
 	ULONG m_ulThreadCount;
-	ULONG m_ulRequestCount;
-	HANDLE *m_arrhThreads;
-
-	HANDLE m_hThreadStopEvent;
 
 	std::wstring m_workingDir;
 	std::wstring m_infPath;
-	std::vector<std::vector<BYTE>> m_buffers;
+	std::vector<std::vector<BYTE>> m_Buffers;
+	std::vector<HANDLE> m_Threads;
 
 	static std::unique_ptr<ProcessNotification> s_processNotification;
 };
