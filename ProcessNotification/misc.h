@@ -7,3 +7,5 @@ void Install(std::wstring infFilename);
 void Uninstall(std::wstring infFilename);
 bool StartDriver();
 bool StopDriver();
+void ToLowerCase(std::wstring& path);
+void ExtractProcessName(std::wstring& processPath);

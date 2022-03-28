@@ -52,14 +52,6 @@ NTSTATUS MinifilterCommportMessage(
 
 	switch (pFilterCommandMessage->MsgId)
 	{
-	case MsgId_BreakConnection:
-
-		FltCloseClientPort(g_globalData.pFltFilterHandle, &g_globalData.pServicePort);
-		pPortContext->hClientPort = NULL;
-		g_globalData.pServicePort = NULL;
-		NTStatus = STATUS_SUCCESS;
-		break;
-
 	case MsgId_EnableSystem:
 
 		g_globalData.bIsMonitoringEnabled = TRUE;

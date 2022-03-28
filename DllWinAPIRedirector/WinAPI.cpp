@@ -58,7 +58,7 @@ Mine_CreateFileW(
         return Real_CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
     }
 
-    MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_CreateFileW", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_CreateFileW", MB_OK | MB_SYSTEMMODAL);
     hFile = Real_CreateFileW(redirectedPath.c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
     if (INVALID_HANDLE_VALUE == hFile)
     {
@@ -93,7 +93,7 @@ Mine_CreateFileA(
     }
     std::string redirectedPathA = ConvertWstringToString(redirectedPathW);
 
-    MessageBoxA(NULL, redirectedPathA.c_str(), "Mine_CreateFileA", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxA(NULL, redirectedPathA.c_str(), "Mine_CreateFileA", MB_OK | MB_SYSTEMMODAL);
 
     hFile = Real_CreateFileA(redirectedPathA.c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
     if (INVALID_HANDLE_VALUE == hFile)

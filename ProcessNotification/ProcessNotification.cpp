@@ -78,6 +78,8 @@ bool ProcessNotification::InitSystem()
 		return false;
 	}
 
+	InitProcessInjectionList();
+
 	boRet = InitThreadPool();
 	if (false == boRet)
 	{
@@ -157,6 +159,7 @@ bool ProcessNotification::MessageLoop()
 			if (NULL != pProcessInfo)
 			{
 				wprintf(L"Process (%s) created\n", pProcessInfo->wszProcessPath);
+				InjectInProcess(pProcessInfo->wszProcessPath, pProcessInfo->dwProcessId);
 			}
 		}
 
@@ -257,6 +260,209 @@ bool ProcessNotification::DeinitThreadPool()
 	return true;
 }
 
+bool ProcessNotification::InjectInProcess(std::wstring path, ULONG ulProcessId)
+{
+	if (false == IsProcessPresentInInjectionList(path))
+	{
+		return false;
+	}
+
+	InjectDLL(ulProcessId);
+
+	return true;
+}
+
+bool ProcessNotification::IsProcessPresentInInjectionList(std::wstring path)
+{
+	if (m_processInjectionList.empty())
+	{
+		return false;
+	}
+
+	ExtractProcessName(path);
+	ToLowerCase(path);
+
+	std::list<std::wstring>::iterator iter;
+	for (iter = m_processInjectionList.begin(); iter != m_processInjectionList.end(); iter++)
+	{
+		if (0 == path.compare(*iter))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool ProcessNotification::InitProcessInjectionList()
+{
+	WCHAR* pwszExtData;
+	WCHAR* pwszExtDataTemp;
+
+	bool boRet = GetProcessNameData(&pwszExtData);
+	if (false == boRet)
+	{
+		return boRet;
+	}
+
+	pwszExtDataTemp = pwszExtData;
+
+	while (*pwszExtDataTemp != '\0')
+	{
+		std::wstring processName = pwszExtDataTemp;
+		ToLowerCase(processName);
+		m_processInjectionList.push_back(processName);
+		pwszExtDataTemp += processName.length() + 1;
+	}
+
+	ReleaseProcessNameData(pwszExtData);
+
+	return true;
+}
+
+bool
+ProcessNotification::GetProcessNameData(
+	WCHAR** ppwszProcessNameData
+)
+{
+	DWORD dwRetVal;
+	HRESULT hResult;
+	WCHAR* pwszData;
+	WCHAR wszFilePath[MAX_PATH];
+
+	if (NULL == ppwszProcessNameData)
+	{
+		return false;
+	}
+
+	hResult = StringCchCopyW(wszFilePath, ARRAYSIZE(wszFilePath), m_workingDir.c_str());
+	if (FAILED(hResult))
+	{
+		return false;
+	}
+
+	hResult = StringCchCatW(wszFilePath, ARRAYSIZE(wszFilePath), FILE_NAME_CONFIG_W);
+	if (FAILED(hResult))
+	{
+		return false;
+	}
+
+	pwszData = (WCHAR*)malloc(MAX_INI_SECTION_CHARS * sizeof(WCHAR));
+	if (NULL == pwszData)
+	{
+		return false;
+	}
+	ZeroMemory(pwszData, MAX_INI_SECTION_CHARS * sizeof(WCHAR));
+
+	dwRetVal = GetPrivateProfileSectionW(
+		CONFIG_SECTION_NAME_W,
+		pwszData,
+		MAX_INI_SECTION_CHARS,
+		wszFilePath
+	);
+	if (/*0 == dwRetVal || */dwRetVal == (MAX_INI_SECTION_CHARS - 2))	//	If the buffer is not large enough to contain all the key name and value pairs associated with the named section, the return value is equal to nSize minus two.
+	{
+		wprintf(L"GetPrivateProfileSectionW() Failed.\n");
+
+		free(pwszData);
+		return false;
+	}
+
+	*ppwszProcessNameData = pwszData;
+
+	return TRUE;
+}
+
+void ProcessNotification::ReleaseProcessNameData(
+	WCHAR* pwszProcessNameData
+)
+{
+	if (NULL == pwszProcessNameData)
+		return;
+
+	free(pwszProcessNameData);
+}
+
+bool ProcessNotification::InjectDLL(ULONG ulProcessId)
+{
+	WCHAR wszFolderPath[MAX_PATH];
+	HRESULT hResult = StringCchCopyW(wszFolderPath, ARRAYSIZE(wszFolderPath), m_workingDir.c_str());
+	if (FAILED(hResult))
+	{
+		wprintf(L"InjectDLL: StringCchCopyW() failed with error(%u)\n", HRESULT_CODE(hResult));
+		return false;
+	}
+
+	hResult = StringCchCatW(wszFolderPath, ARRAYSIZE(wszFolderPath), INJECTOR_DLL_NAME);
+	if (FAILED(hResult))
+	{
+		wprintf(L"InjectDLL: StringCchCatW() failed with error(%u)\n", HRESULT_CODE(hResult));
+		return false;
+	}
+
+	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, ulProcessId);
+	if (NULL == hProcess)
+	{
+		wprintf(L"InjectDLL: OpenProcess() failed for pid(%u) with error(%u)\n", ulProcessId, GetLastError());
+		return false;
+	}
+
+	size_t stMemorySize = wcslen(wszFolderPath) * sizeof(WCHAR) + sizeof(WCHAR);
+
+	LPVOID lpInjectorDLLPath;
+	lpInjectorDLLPath = VirtualAllocEx(hProcess, NULL, stMemorySize, MEM_COMMIT, PAGE_READWRITE);
+	if (NULL == lpInjectorDLLPath)
+	{
+		wprintf(L"InjectDLL: VirtualAllocEx() failed with error(%u)\n", GetLastError());
+		CloseHandle(hProcess);
+		return false;
+	}
+
+	SIZE_T stBytesWrite;
+	BOOL boRet = WriteProcessMemory(hProcess, lpInjectorDLLPath, wszFolderPath, stMemorySize, &stBytesWrite);
+	if (FALSE == boRet)
+	{
+		wprintf(L"InjectDLL: WriteProcessMemory() failed with error(%u)\n", GetLastError());
+		VirtualFreeEx(hProcess, lpInjectorDLLPath, 0, MEM_RELEASE);
+		CloseHandle(hProcess);
+		return false;
+	}
+
+	HMODULE hModule = GetModuleHandleW(L"Kernel32");
+	if (NULL == hModule)
+	{
+		wprintf(L"InjectDLL: GetModuleHandleW() failed with error(%u)\n", GetLastError());
+		VirtualFreeEx(hProcess, lpInjectorDLLPath, 0, MEM_RELEASE);
+		CloseHandle(hProcess);
+		return false;
+	}
+
+	PVOID pvLoadLib = GetProcAddress(hModule, "LoadLibraryW");
+	if (NULL == pvLoadLib)
+	{
+		wprintf(L"InjectDLL: GetProcAddress() failed \n");
+		VirtualFreeEx(hProcess, lpInjectorDLLPath, 0, MEM_RELEASE);
+		CloseHandle(hProcess);
+		return false;
+	}
+
+	HANDLE hRemoteThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)pvLoadLib, lpInjectorDLLPath, 0, NULL);
+	if (NULL == hRemoteThread)
+	{
+		wprintf(L"InjectDLL: CreateRemoteThread() failed with error(%u)\n", GetLastError());
+		VirtualFreeEx(hProcess, lpInjectorDLLPath, 0, MEM_RELEASE);
+		CloseHandle(hProcess);
+		return false;
+	}
+
+	WaitForSingleObject(hRemoteThread, INFINITE);
+
+	CloseHandle(hRemoteThread);
+	VirtualFreeEx(hProcess, lpInjectorDLLPath, 0, MEM_RELEASE);
+	CloseHandle(hProcess);
+
+	return true;
+}
 int wmain()
 {
 	ProcessNotification::Create();

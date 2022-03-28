@@ -179,3 +179,17 @@ bool StopDriver()
 
 	return true;
 }
+
+void ToLowerCase(std::wstring& path)
+{
+	std::transform(path.begin(), path.end(), path.begin(), [](wchar_t c) { return std::tolower(c); });
+}
+
+void ExtractProcessName(std::wstring& processPath)
+{
+	size_t pos = processPath.find_last_of(L"\\");
+	if (pos != std::wstring::npos)
+	{
+		processPath.erase(0, pos + 1);
+	}
+}

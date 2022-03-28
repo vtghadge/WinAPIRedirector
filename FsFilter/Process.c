@@ -742,51 +742,6 @@ NTSTATUS RemoveAllEntriesFromRunningProcessTable()
 	return STATUS_SUCCESS;
 }
 
-NTSTATUS GetProcessFlags(HANDLE hPID, DWORD* pdwProcessFlags)
-{
-	RUNNING_PROCESS_INFO *pRunningProcessInfo = NULL;
-	PRUNNING_PROCESS_INFO pReturnedRunningProcessInfo = NULL;
-
-	if (NULL == hPID || NULL == pdwProcessFlags)
-	{
-		return STATUS_INVALID_PARAMETER;
-	}
-	*pdwProcessFlags = PROCESS_FLAG_NONE;
-
-	if (KeGetCurrentIrql() > APC_LEVEL)
-	{
-		return STATUS_UNSUCCESSFUL;
-	}
-
-	pRunningProcessInfo = (RUNNING_PROCESS_INFO*)ExAllocateFromNPagedLookasideList(&g_runningProcessTable.RunningProcessInfoList);
-	if (NULL == pRunningProcessInfo)
-	{
-		return STATUS_UNSUCCESSFUL;
-	}
-	RtlZeroMemory(pRunningProcessInfo, sizeof(RUNNING_PROCESS_INFO));
-
-	pRunningProcessInfo->dwProcessId = (DWORD)(ULONG_PTR)hPID;
-
-	FltAcquireResourceShared(&g_runningProcessTable.RunningProcessTableLock);
-
-	pReturnedRunningProcessInfo = (RUNNING_PROCESS_INFO*)RtlLookupElementGenericTable(
-		&g_runningProcessTable.RunningProcessTable,
-		pRunningProcessInfo
-	);
-	if (NULL == pReturnedRunningProcessInfo)
-	{
-		FltReleaseResource(&g_runningProcessTable.RunningProcessTableLock);
-		ExFreeToNPagedLookasideList(&g_runningProcessTable.RunningProcessInfoList, pRunningProcessInfo);
-		return STATUS_SUCCESS;
-	}
-
-	*pdwProcessFlags = pReturnedRunningProcessInfo->dwProcessFlags;
-
-	FltReleaseResource(&g_runningProcessTable.RunningProcessTableLock);
-	ExFreeToNPagedLookasideList(&g_runningProcessTable.RunningProcessInfoList, pRunningProcessInfo);
-
-	return STATUS_SUCCESS;
-}
 
 NTSTATUS AllocateUnicodeString(_In_ POOL_TYPE PoolType, _In_ ULONG ulStringSize, _Out_ PUNICODE_STRING pUniStr)
 {
