@@ -1,6 +1,6 @@
 #pragma once
 
-#define MAX_THREAD_COUNT	3
+#define MAX_THREAD_COUNT	1
 
 class ProcessNotification
 {
