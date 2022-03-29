@@ -18,7 +18,6 @@
 typedef enum tagFILTER_MSG_ID
 {
 	MsgId_Undefined = 0,
-	MsgId_BreakConnection = 1,
 	MsgId_EnableSystem,
 	MsgId_DisableSystem,
 

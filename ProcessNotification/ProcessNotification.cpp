@@ -28,7 +28,10 @@ void ProcessNotification::Create()
 
 void ProcessNotification::Release()
 {
-    s_processNotification.reset(nullptr);
+	if (nullptr != s_processNotification)
+	{
+		s_processNotification.reset(nullptr);
+	}
 }
 
 ProcessNotification::ProcessNotification(ULONG ulThreadCount) :m_ulThreadCount(ulThreadCount)
@@ -51,6 +54,7 @@ BOOL __stdcall ProcessNotification::CtrlCHandler(DWORD fdwCtrlType)
 	{
 		wprintf(L"CtrlCHandler: Quit console window event received\n");
 		ProcessNotification::GetInstance()->DeinitSystem();
+		ProcessNotification::GetInstance()->Release();
 	}
 
 	return FALSE;
@@ -470,7 +474,7 @@ int wmain()
 	bool boRet = ProcessNotification::GetInstance()->InitSystem();
 	if (false == boRet)
 	{
-		wprintf(L"InitThreadPool: InitSystem failed.");
+		wprintf(L"wmain: InitSystem failed.");
 		ProcessNotification::Release();
 		return 0;
 	}
