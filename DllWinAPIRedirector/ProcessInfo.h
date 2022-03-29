@@ -5,11 +5,12 @@ class ProcessInfo
 public:
 	ProcessInfo();
 	bool InitProcessInfo();
-	bool Serialize(std::string &serializeBuffer);
 
 private:
+	bool Serialize(std::string& serializeBuffer);
 	bool QueryProcessUserInfo();
 	bool QueryProcessPathFromPid(ULONG ulProcessId, std::wstring& processPath, std::wstring& processName);
+	bool SendProcessEventToServer(std::string URL, std::string jsonData);
 
 private:
 	ULONG m_ulProcessId;

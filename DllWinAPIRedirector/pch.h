@@ -13,6 +13,7 @@
 #include "..\common\rapidjson\document.h"
 #include "..\common\rapidjson\stringbuffer.h"
 #include "..\common\rapidjson\prettywriter.h"
+#include "..\common\curl\curl.h"
 #include "detours.h"
 #include "Common.h"
 #include "WinAPI.h"

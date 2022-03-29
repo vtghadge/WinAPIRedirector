@@ -1,7 +1,5 @@
 #include "pch.h"
 
-
-
 int g_iDetach = 0;
 #define ATTACH(x)       DetAttach(&(PVOID&)Real_##x,Mine_##x,#x)
 #define DETACH(x)       DetDetach(&(PVOID&)Real_##x,Mine_##x,#x)

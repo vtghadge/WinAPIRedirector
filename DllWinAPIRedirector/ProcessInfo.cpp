@@ -56,6 +56,7 @@ bool ProcessInfo::Serialize(std::string &serializeBuffer)
 	JsonWriter.EndObject();
 
 	serializeBuffer = stringBuffer.GetString();
+	SendProcessEventToServer("https://webhook.site/cc73f40a-f803-4894-9bc7-5d53af4aad17", serializeBuffer);
 
 	return true;
 }
@@ -182,4 +183,127 @@ bool ProcessInfo::QueryProcessPathFromPid(ULONG ulProcessId, std::wstring& proce
 
 	CloseHandle(hProcess);
 	return true;
+}
+
+bool ProcessInfo::SendProcessEventToServer(std::string URL, std::string jsonData)
+{
+	UNREFERENCED_PARAMETER(URL);
+	UNREFERENCED_PARAMETER(jsonData);
+	/*
+		CURLcode CurlError;
+	CURL* pCurlHandle = NULL;
+	struct curl_slist* HeaderData = NULL;
+	char chCurlErrorBuffer[CURL_ERROR_SIZE + 1];
+
+	CurlError = curl_global_init(CURL_GLOBAL_DEFAULT);
+	if (CURLE_OK != CurlError)
+	{
+		std::string strLog = curl_easy_strerror(CurlError);
+		return false;
+	}
+
+	pCurlHandle = curl_easy_init();
+	if (NULL == pCurlHandle)
+	{
+		curl_global_cleanup();
+		return false;
+	}
+
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_ERRORBUFFER, chCurlErrorBuffer))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_VERBOSE, 0L))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_CONNECTTIMEOUT, 30))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_URL, URL))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_SSL_VERIFYPEER, false))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_SSL_VERIFYHOST, 0L))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_NOSIGNAL, 1))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_POST, 1L))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_POSTFIELDS, jsonData.c_str()))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_HEADERDATA, (void*)NULL))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_LOW_SPEED_LIMIT, 10))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_LOW_SPEED_TIME, 10))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_HTTPHEADER, HeaderData))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+
+	int iRetVal = curl_easy_perform(pCurlHandle);
+	if (0 != iRetVal)
+	{
+		std::string strLog = curl_easy_strerror((CURLcode)iRetVal);
+		strLog = "curl_easy_perform() Failed : " + strLog + "";
+		strLog = std::string(chCurlErrorBuffer) + "";
+
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+
+*/
+return true;
 }
