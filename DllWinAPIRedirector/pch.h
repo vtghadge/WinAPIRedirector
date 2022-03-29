@@ -9,6 +9,10 @@
 
 // add headers that you want to pre-compile here
 #include "framework.h"
+#include "..\common\rapidjson\rapidjson.h"
+#include "..\common\rapidjson\document.h"
+#include "..\common\rapidjson\stringbuffer.h"
+#include "..\common\rapidjson\prettywriter.h"
 #include "detours.h"
 #include "Common.h"
 #include "WinAPI.h"

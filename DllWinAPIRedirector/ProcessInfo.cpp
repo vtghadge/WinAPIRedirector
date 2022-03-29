@@ -1,6 +1,5 @@
 #include "pch.h"
-#include"ProcessInfo.h"
-#include"Common.h"
+#include <sddl.h>
 
 ProcessInfo::ProcessInfo()
 {
@@ -22,6 +21,42 @@ bool ProcessInfo::InitProcessInfo()
 		return false;
 	}
 
+	std::string serializeProcessData;
+	Serialize(serializeProcessData);
+
+	return true;
+}
+
+bool ProcessInfo::Serialize(std::string &serializeBuffer)
+{
+	rapidjson::StringBuffer stringBuffer;
+	rapidjson::Writer<rapidjson::StringBuffer> JsonWriter(stringBuffer);
+
+	std::string tempStr;
+	JsonWriter.StartObject();
+
+	JsonWriter.String("ProcessId");
+	JsonWriter.Uint64(m_ulProcessId);
+
+	JsonWriter.String("ParentProcessId");
+	JsonWriter.Uint64(m_ulParentProcessId);
+
+	JsonWriter.String("ProcessPath");
+	tempStr = ConvertWstringToString(m_processPath);
+	JsonWriter.String(tempStr.c_str());
+
+	JsonWriter.String("ProcessName");
+	tempStr = ConvertWstringToString(m_processPath);
+	JsonWriter.String(tempStr.c_str());
+
+	JsonWriter.String("SID");
+	tempStr = ConvertWstringToString(m_userSID);
+	JsonWriter.String(tempStr.c_str());
+
+	JsonWriter.EndObject();
+
+	serializeBuffer = stringBuffer.GetString();
+
 	return true;
 }
 
@@ -37,6 +72,7 @@ bool ProcessInfo::QueryProcessUserInfo()
 	DWORD			dwRetUserNameLength = MAX_PATH;
 	DWORD			dwRetDomainNameLength = MAX_PATH;
 	PTOKEN_USER		pTokenUser = NULL;
+	LPTSTR pszSIDString = NULL;
 
 	if (0 == m_ulProcessId)
 	{
@@ -96,8 +132,18 @@ bool ProcessInfo::QueryProcessUserInfo()
 	m_userName = std::wstring(wszUserName_l);
 	m_domainName = std::wstring(wszDomainName);
 
-	free(pTokenUser);
+	boRetVal = ConvertSidToStringSidW(pTokenUser->User.Sid, &pszSIDString);
+	if (FALSE == boRetVal)
+	{
+		free(pTokenUser);
+		CloseHandle(hToken);
+		CloseHandle(hProcess);
+		return false;
+	}
 
+	m_userSID = pszSIDString;
+
+	free(pTokenUser);
 	CloseHandle(hToken);
 	CloseHandle(hProcess);
 
