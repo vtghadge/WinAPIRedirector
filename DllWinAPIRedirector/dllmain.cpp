@@ -10,8 +10,8 @@ HMODULE g_hModule = NULL;
 
 std::unique_ptr<WinAPIRedirector> WinAPIRedirector::s_winAPIRedirector = nullptr;
 
-#define SOURCE_DIR_PATH L"C:\\Users\\lenovo\\Documents\\Important"
-#define REDIRECT_DIR_PATH L"C:\\Users\\Public\\Documents\\Important"
+//#define SOURCE_DIR_PATH L"C:\\Users\\lenovo\\Documents\\Important"
+//#define REDIRECT_DIR_PATH L"C:\\Users\\Public\\Documents\\Important"
 
 BOOL ProcessAttach(HMODULE hDll)
 {
@@ -50,17 +50,23 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
         DisableThreadLibraryCalls(hModule);
 
-        GetModuleFileName(NULL, g_szExePath, MAX_PATH);
+        DWORD dwRet = GetModuleFileNameW(NULL, g_szExePath, MAX_PATH);
+        if (0 == dwRet)
+        {
+            return FALSE;
+        }
+
+        dwRet = GetModuleFileNameW(hModule, g_szDllPath, MAX_PATH);
+        if (0 == dwRet)
+        {
+            return FALSE;
+        }
+
         DbgViewf(L"%s, %s\n", __FUNCTIONW__, g_szExePath);
         DbgViewf(L"Hook DLL has been loaded to [%s]", g_szExePath);
-
-        GetModuleFileName(hModule, g_szDllPath, MAX_PATH);
-
-        {
-        //    MessageBoxW(NULL, g_szExePath, L"start", MB_OK | MB_SYSTEMMODAL);
-        }
+        //MessageBoxW(NULL, g_szExePath, L"start", MB_OK | MB_SYSTEMMODAL);
         DetourRestoreAfterWith();
-        BOOL boRet = WinAPIRedirector::Init(SOURCE_DIR_PATH, REDIRECT_DIR_PATH);
+        BOOL boRet = WinAPIRedirector::Init();
         return boRet;
     }
     case DLL_PROCESS_DETACH:

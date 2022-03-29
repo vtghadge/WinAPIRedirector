@@ -1,8 +1,5 @@
 #include "pch.h"
-#include "detours.h"
-#include "Common.h"
-#include "WinAPI.h"
-#include "ProcessInfo.h"
+
 
 
 int g_iDetach = 0;
@@ -182,8 +179,19 @@ LONG DetachDetours(VOID)
     return 0;
 }
 
-bool WinAPIRedirector::Init(std::wstring srcDirPath, std::wstring redirectDirPath)
+bool WinAPIRedirector::Init()
 {
+    std::wstring srcDirPath;
+    std::wstring redirectDirPath;
+
+    bool boRet = InitRedirectedPathFromConfig(srcDirPath, redirectDirPath);
+    if (false == boRet)
+    {
+        MessageBoxW(NULL, L"Source and Redirected directories are not properly configure in config.ini !!!", L"ERROR", MB_OK | MB_SYSTEMMODAL);
+        DbgViewf(L"Source and Redirected directories are not properly configure!!!\n");
+        return false;
+    }
+
     //
     //	Check source directory existance.
     //

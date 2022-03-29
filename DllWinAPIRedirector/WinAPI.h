@@ -1,6 +1,10 @@
 #pragma once
 #include "ProcessInfo.h"
 
+#define FILE_NAME_CONFIG_W          L"Config.ini"
+#define	MAX_INI_SECTION_CHARS		32767
+#define CONFIG_SECTION_NAME_W       L"RedirectionPath"
+
 VOID DetAttach(PVOID* ppvReal, PVOID pvMine, const char* psz);
 
 VOID DetDetach(PVOID* ppvReal, PVOID pvMine, const char* psz);
@@ -14,7 +18,7 @@ extern int g_iDetach;
 class WinAPIRedirector
 {
 public:
-	static bool Init(std::wstring srcDirPath, std::wstring redirectDirPath);
+	static bool Init();
 	static void Release();
 	static WinAPIRedirector* GetInstance();
 
@@ -55,5 +59,4 @@ private:
 	void Unlock();
 
 	bool CheckIfSourcePathLocation(std::wstring& path, std::wstring& redirectedPath);
-
 };

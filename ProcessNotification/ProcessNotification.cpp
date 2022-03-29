@@ -162,8 +162,8 @@ bool ProcessNotification::MessageLoop()
 			pProcessInfo = (PROCESS_EVENT_INFO*)pDriverMessage->rawData;
 			if (NULL != pProcessInfo)
 			{
-				wprintf(L"Process (%s) created\n", pProcessInfo->wszProcessPath);
-				InjectInProcess(pProcessInfo->wszProcessPath, pProcessInfo->dwProcessId);
+				bool boRet = InjectInProcess(pProcessInfo->wszProcessPath, pProcessInfo->dwProcessId);
+				wprintf(L"Process (%s) created with pid(%u). Injected(%x)\n", pProcessInfo->wszProcessPath, pProcessInfo->dwProcessId, boRet);
 			}
 		}
 
@@ -271,9 +271,9 @@ bool ProcessNotification::InjectInProcess(std::wstring path, ULONG ulProcessId)
 		return false;
 	}
 
-	InjectDLL(ulProcessId);
+	bool boRet = InjectDLL(ulProcessId);
 
-	return true;
+	return boRet;
 }
 
 bool ProcessNotification::IsProcessPresentInInjectionList(std::wstring path)
@@ -300,26 +300,26 @@ bool ProcessNotification::IsProcessPresentInInjectionList(std::wstring path)
 
 bool ProcessNotification::InitProcessInjectionList()
 {
-	WCHAR* pwszExtData;
-	WCHAR* pwszExtDataTemp;
+	WCHAR* pwszProcessNameData;
+	WCHAR* pwszProcessNameDataTemp;
 
-	bool boRet = GetProcessNameData(&pwszExtData);
+	bool boRet = GetProcessNameData(&pwszProcessNameData);
 	if (false == boRet)
 	{
 		return boRet;
 	}
 
-	pwszExtDataTemp = pwszExtData;
+	pwszProcessNameDataTemp = pwszProcessNameData;
 
-	while (*pwszExtDataTemp != '\0')
+	while (*pwszProcessNameDataTemp != '\0')
 	{
-		std::wstring processName = pwszExtDataTemp;
+		std::wstring processName = pwszProcessNameDataTemp;
 		ToLowerCase(processName);
 		m_processInjectionList.push_back(processName);
-		pwszExtDataTemp += processName.length() + 1;
+		pwszProcessNameDataTemp += processName.length() + 1;
 	}
 
-	ReleaseProcessNameData(pwszExtData);
+	ReleaseProcessNameData(pwszProcessNameData);
 
 	return true;
 }

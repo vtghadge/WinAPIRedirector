@@ -9,6 +9,10 @@
 
 // add headers that you want to pre-compile here
 #include "framework.h"
+#include "detours.h"
+#include "Common.h"
+#include "WinAPI.h"
+#include "ProcessInfo.h"
 
 extern WCHAR g_szExePath[MAX_PATH];
 extern WCHAR g_szDllPath[MAX_PATH];

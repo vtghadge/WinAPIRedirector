@@ -121,3 +121,128 @@ void ExtractProcessName(std::wstring &processPath)
         processPath.erase(0, pos + 1);
     }
 }
+
+void ExtractFolderPath(std::wstring& processPath, bool boIncludeSlash)
+{
+    size_t pos = processPath.find_last_of(L"\\");
+    if (pos != std::wstring::npos)
+    {
+        if (boIncludeSlash)
+        {
+            processPath.erase(pos + 1);
+        }
+        else
+        {
+            processPath.erase(pos);
+        }
+    }
+}
+
+
+bool InitRedirectedPathFromConfig(std::wstring &srcPath, std::wstring &rediredtedPath)
+{
+    WCHAR* pwszData;
+    WCHAR* pwszDataTemp;
+
+    bool boRet = GetRedirectionPathData(&pwszData);
+    if (false == boRet)
+    {
+        return boRet;
+    }
+
+    pwszDataTemp = pwszData;
+    std::wstring redirectionPathMap;
+    bool found = false;
+    size_t pos;
+    while (*pwszDataTemp != '\0')
+    {
+        redirectionPathMap = pwszDataTemp;
+        ToLowerCase(redirectionPathMap);
+
+        pos = redirectionPathMap.find('=');
+        if (std::wstring::npos != pos)
+        {
+            found = true;
+            break;
+        }
+
+        pwszDataTemp += redirectionPathMap.length() + 1;
+    }
+
+    ReleaseRedirectionPathData(pwszData);
+
+    if (false == found)
+    {
+        return found;
+    }
+
+    srcPath = redirectionPathMap.substr(0, pos);
+    rediredtedPath = redirectionPathMap.substr(pos + 1);
+
+    return true;
+}
+
+bool
+GetRedirectionPathData(
+    WCHAR** ppwszData
+)
+{
+    DWORD dwRetVal;
+    HRESULT hResult;
+    WCHAR* pwszData;
+    WCHAR wszFilePath[MAX_PATH];
+
+    if (NULL == ppwszData)
+    {
+        return false;
+    }
+    std::wstring dllPath = g_szDllPath;
+    ExtractFolderPath(dllPath, true);
+
+    hResult = StringCchCopyW(wszFilePath, ARRAYSIZE(wszFilePath), dllPath.c_str());
+    if (FAILED(hResult))
+    {
+        return false;
+    }
+
+    hResult = StringCchCatW(wszFilePath, ARRAYSIZE(wszFilePath), FILE_NAME_CONFIG_W);
+    if (FAILED(hResult))
+    {
+        return false;
+    }
+
+    pwszData = (WCHAR*)malloc(MAX_INI_SECTION_CHARS * sizeof(WCHAR));
+    if (NULL == pwszData)
+    {
+        return false;
+    }
+    ZeroMemory(pwszData, MAX_INI_SECTION_CHARS * sizeof(WCHAR));
+
+    dwRetVal = GetPrivateProfileSectionW(
+        CONFIG_SECTION_NAME_W,
+        pwszData,
+        MAX_INI_SECTION_CHARS,
+        wszFilePath
+    );
+    if (/*0 == dwRetVal || */dwRetVal == (MAX_INI_SECTION_CHARS - 2))	//	If the buffer is not large enough to contain all the key name and value pairs associated with the named section, the return value is equal to nSize minus two.
+    {
+        wprintf(L"GetPrivateProfileSectionW() Failed.\n");
+
+        free(pwszData);
+        return false;
+    }
+
+    *ppwszData = pwszData;
+
+    return TRUE;
+}
+
+void ReleaseRedirectionPathData(
+    WCHAR* pwszData
+)
+{
+    if (NULL == pwszData)
+        return;
+
+    free(pwszData);
+}
