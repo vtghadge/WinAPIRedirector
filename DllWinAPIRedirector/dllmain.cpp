@@ -58,7 +58,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
         DbgViewf(L"%s, %s\n", __FUNCTIONW__, g_szExePath);
         DbgViewf(L"Hook DLL has been loaded to [%s]", g_szExePath);
-        MessageBoxW(NULL, g_szExePath, L"start", MB_OK | MB_SYSTEMMODAL);
+        //MessageBoxW(NULL, g_szExePath, L"start", MB_OK | MB_SYSTEMMODAL);
         DetourRestoreAfterWith();
         BOOL boRet = WinAPIRedirector::Init();
         return boRet;
