@@ -1,10 +1,45 @@
 #include "pch.h"
 #include <sddl.h>
 
+//	Undocumented.
+typedef struct _PROCESS_BASIC_INFORMATION
+{
+	LONG ExitStatus;
+	PVOID PebBaseAddress;
+	ULONG_PTR AffinityMask;
+	LONG BasePriority;
+	HANDLE UniqueProcessId;
+	HANDLE InheritedFromUniqueProcessId;
+
+} PROCESS_BASIC_INFORMATION, * PPROCESS_BASIC_INFORMATION;
+
+typedef struct _KERNEL_USER_TIMES
+{
+	LARGE_INTEGER CreateTime;
+	LARGE_INTEGER ExitTime;
+	LARGE_INTEGER KernelTime;
+	LARGE_INTEGER UserTime;
+
+} KERNEL_USER_TIMES, * PKERNEL_USER_TIMES;
+
+typedef enum _PROCESSINFOCLASS {
+	ProcessBasicInformation = 0,
+	ProcessTimes = 4
+} PROCESSINFOCLASS;
+
+typedef LONG(NTAPI* PFN_NtQueryInformationProcess) (
+	IN HANDLE ProcessHandle,
+	IN PROCESSINFOCLASS ProcessInformationClass,
+	OUT PVOID ProcessInformation,
+	IN ULONG ProcessInformationLength,
+	OUT PULONG ReturnLength
+	);
+
 ProcessInfo::ProcessInfo()
 {
 	m_ulProcessId = GetCurrentProcessId();
 	m_ulParentProcessId = 0;
+	m_llProcessCreationTime = 0;
 }
 
 bool ProcessInfo::InitProcessInfo()
@@ -13,6 +48,12 @@ bool ProcessInfo::InitProcessInfo()
 	if (false == boRet)
 	{
 		return false;
+	}
+
+	boRet = QueryProcessExtraInfo(m_ulProcessId);
+	if (true == boRet)
+	{
+		QueryProcessPathFromPid(m_ulParentProcessId, m_parentProcessPath, m_parentProcessName);
 	}
 
 	boRet = QueryProcessUserInfo();
@@ -35,22 +76,41 @@ bool ProcessInfo::Serialize(std::string &serializeBuffer)
 	std::string tempStr;
 	JsonWriter.StartObject();
 
+	JsonWriter.String("SID");
+	tempStr = ConvertWstringToString(m_userSID);
+	JsonWriter.String(tempStr.c_str());
+
+	JsonWriter.String("UserName");
+	tempStr = ConvertWstringToString(m_userName);
+	JsonWriter.String(tempStr.c_str());
+
+	JsonWriter.String("Domain");
+	tempStr = ConvertWstringToString(m_domainName);
+	JsonWriter.String(tempStr.c_str());
+
 	JsonWriter.String("ProcessId");
 	JsonWriter.Uint64(m_ulProcessId);
-
-	JsonWriter.String("ParentProcessId");
-	JsonWriter.Uint64(m_ulParentProcessId);
 
 	JsonWriter.String("ProcessPath");
 	tempStr = ConvertWstringToString(m_processPath);
 	JsonWriter.String(tempStr.c_str());
 
 	JsonWriter.String("ProcessName");
-	tempStr = ConvertWstringToString(m_processPath);
+	tempStr = ConvertWstringToString(m_processName);
 	JsonWriter.String(tempStr.c_str());
 
-	JsonWriter.String("SID");
-	tempStr = ConvertWstringToString(m_userSID);
+	JsonWriter.String("CreationTime");
+	JsonWriter.Uint64(m_llProcessCreationTime);
+
+	JsonWriter.String("ParentProcessId");
+	JsonWriter.Uint64(m_ulParentProcessId);
+
+	JsonWriter.String("ParentProcessPath");
+	tempStr = ConvertWstringToString(m_parentProcessPath);
+	JsonWriter.String(tempStr.c_str());
+
+	JsonWriter.String("ParentProcessName");
+	tempStr = ConvertWstringToString(m_parentProcessName);
 	JsonWriter.String(tempStr.c_str());
 
 	JsonWriter.EndObject();
@@ -182,6 +242,60 @@ bool ProcessInfo::QueryProcessPathFromPid(ULONG ulProcessId, std::wstring& proce
 	ExtractProcessName(processName);
 
 	CloseHandle(hProcess);
+	return true;
+}
+
+bool ProcessInfo::QueryProcessExtraInfo(ULONG ulProcessId)
+{
+	PROCESS_BASIC_INFORMATION BasicInfo;
+	PFN_NtQueryInformationProcess pfnNtQueryInformationProcess;
+
+	if (0 == ulProcessId)
+	{
+		return false;
+	}
+
+	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, ulProcessId);
+	if (NULL == hProcess)
+	{
+		return false;
+	}
+
+	HMODULE hModule = GetModuleHandleW(L"ntdll");
+	if (NULL == hModule)
+	{
+		CloseHandle(hProcess);
+		return false;
+	}
+
+	pfnNtQueryInformationProcess = (PFN_NtQueryInformationProcess)GetProcAddress(hModule, "NtQueryInformationProcess");
+	if (pfnNtQueryInformationProcess == NULL)
+	{
+		CloseHandle(hProcess);
+		return false;
+	}
+
+	LONG lRetVal = pfnNtQueryInformationProcess(hProcess, ProcessBasicInformation, &BasicInfo, sizeof(BasicInfo), NULL);
+	if (ERROR_SUCCESS != lRetVal)
+	{
+		CloseHandle(hProcess);
+		return false;
+	}
+
+	m_ulParentProcessId = (ULONG)(ULONG_PTR)BasicInfo.InheritedFromUniqueProcessId;
+
+	KERNEL_USER_TIMES UserTimes;
+	lRetVal = pfnNtQueryInformationProcess(hProcess, ProcessTimes, &UserTimes, sizeof(UserTimes), NULL);
+	if (ERROR_SUCCESS != lRetVal)
+	{
+		CloseHandle(hProcess);
+		return false;
+	}
+
+	m_llProcessCreationTime = UserTimes.CreateTime.QuadPart;
+
+	CloseHandle(hProcess);
+
 	return true;
 }
 
