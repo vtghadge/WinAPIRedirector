@@ -70,7 +70,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
         WinAPIRedirector::Release();
 
-        return true;
+        return TRUE;
     }
     case DLL_THREAD_ATTACH:
     case DLL_THREAD_DETACH:

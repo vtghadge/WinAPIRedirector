@@ -1,12 +1,17 @@
 ReadMe.txt:
-=======
-Utility: 	Redirect Windows API
-Author:		Vishal Ghadge
-Email:		vtghadge@gmail.com
+==========
+- Utility: 	Redirect Windows API
+- Author:		Vishal Ghadge
+- Email:		vtghadge@gmail.com
 
+Build enviornment:
+===================
+1. Visual Studio 2019 (v142)
+2. Windows driver kit - windows 10.0.19041
 
 Building Redirect Windows API:
 ==============================
+
 1. Unpack the whole archive as-is to an empty directory
 2. Open the workspace WinAPIRedirector.sln 
 3. Select build->Batch build
