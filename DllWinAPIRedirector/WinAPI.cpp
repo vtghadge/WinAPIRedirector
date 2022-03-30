@@ -286,7 +286,7 @@ Mine_CopyFileA(
         redirectedPathNew = lpNewFileName;
     }
 
-    MessageBoxA(NULL, redirectedPathExisting.c_str(), "Mine_CopyFileA", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxA(NULL, redirectedPathExisting.c_str(), "Mine_CopyFileA", MB_OK | MB_SYSTEMMODAL);
     return Real_CopyFileA(redirectedPathExisting.c_str(), redirectedPathNew.c_str(), bFailIfExists);
 }
 
@@ -321,7 +321,7 @@ Mine_CopyFileW(
         redirectedPathNew = lpNewFileName;
     }
 
-    MessageBoxW(NULL, redirectedPathExisting.c_str(), L"Mine_CopyFileExW", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxW(NULL, redirectedPathExisting.c_str(), L"Mine_CopyFileExW", MB_OK | MB_SYSTEMMODAL);
     return Real_CopyFileW(redirectedPathExisting.c_str(), redirectedPathNew.c_str(), bFailIfExists);
 }
 
@@ -360,7 +360,7 @@ Mine_CopyFileExA(
         redirectedPathNew = lpNewFileName;
     }
 
-    MessageBoxA(NULL, redirectedPathExisting.c_str(), "Mine_CopyFileExA", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxA(NULL, redirectedPathExisting.c_str(), "Mine_CopyFileExA", MB_OK | MB_SYSTEMMODAL);
     return Real_CopyFileExA(redirectedPathExisting.c_str(), redirectedPathNew.c_str(), lpProgressRoutine, lpData, pbCancel, dwCopyFlags);
 }
 
@@ -398,7 +398,7 @@ Mine_CopyFileExW(
         redirectedPathNew = lpNewFileName;
     }
 
-    MessageBoxW(NULL, redirectedPathExisting.c_str(), L"Mine_CopyFileExW", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxW(NULL, redirectedPathExisting.c_str(), L"Mine_CopyFileExW", MB_OK | MB_SYSTEMMODAL);
     return Real_CopyFileExW(redirectedPathExisting.c_str(), redirectedPathNew.c_str(), lpProgressRoutine, lpData, pbCancel, dwCopyFlags);
 }
 
@@ -422,7 +422,7 @@ Mine_DeleteFileA(
         redirectedPath = lpFileName;
     }
 
-    MessageBoxA(NULL, redirectedPath.c_str(), "Mine_DeleteFileA", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxA(NULL, redirectedPath.c_str(), "Mine_DeleteFileA", MB_OK | MB_SYSTEMMODAL);
     return Real_DeleteFileA(redirectedPath.c_str());
 }
 
@@ -447,7 +447,7 @@ Mine_DeleteFileW(
         redirectedPath = lpFileName;
     }
 
-    MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_DeleteFileW", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_DeleteFileW", MB_OK | MB_SYSTEMMODAL);
     return Real_DeleteFileW(redirectedPath.c_str());
 }
 
@@ -472,9 +472,8 @@ Mine_CreateDirectoryA(
     {
         redirectedPath = lpPathName;
     }
+
     //MessageBoxA(NULL, redirectedPath.c_str(), "Mine_CreateDirectoryA", MB_OK | MB_SYSTEMMODAL);
-
-
     return Real_CreateDirectoryA(redirectedPath.c_str(), lpSecurityAttributes);
 }
 
@@ -499,8 +498,8 @@ Mine_CreateDirectoryW(
     {
         redirectedPath = lpPathName;
     }
-    //MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_CreateDirectoryW", MB_OK | MB_SYSTEMMODAL);
 
+    //MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_CreateDirectoryW", MB_OK | MB_SYSTEMMODAL);
     return Real_CreateDirectoryW(redirectedPath.c_str(), lpSecurityAttributes);
 }
 
@@ -524,8 +523,8 @@ Mine_RemoveDirectoryA(
     {
         redirectedPath = lpPathName;
     }
-    MessageBoxA(NULL, redirectedPath.c_str(), "Mine_RemoveDirectoryW", MB_OK | MB_SYSTEMMODAL);
 
+    //MessageBoxA(NULL, redirectedPath.c_str(), "Mine_RemoveDirectoryW", MB_OK | MB_SYSTEMMODAL);
     return Real_RemoveDirectoryA(redirectedPath.c_str());
 }
 
@@ -548,8 +547,8 @@ Mine_RemoveDirectoryW(
     {
         redirectedPath = lpPathName;
     }
-    MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_RemoveDirectoryW", MB_OK | MB_SYSTEMMODAL);
 
+    //MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_RemoveDirectoryW", MB_OK | MB_SYSTEMMODAL);
     return Real_RemoveDirectoryW(redirectedPath.c_str());
 }
 
@@ -583,7 +582,7 @@ Mine_MoveFileA(
         redirectedPathNew = lpNewFileName;
     }
 
-    MessageBoxA(NULL, redirectedPathExisting.c_str(), "Mine_MoveFileA", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxA(NULL, redirectedPathExisting.c_str(), "Mine_MoveFileA", MB_OK | MB_SYSTEMMODAL);
     return Real_MoveFileA(redirectedPathExisting.c_str(), redirectedPathNew.c_str());
 }
 
@@ -616,7 +615,7 @@ Mine_MoveFileW(
         redirectedPathNew = lpNewFileName;
     }
 
-    MessageBoxW(NULL, redirectedPathExisting.c_str(), L"Mine_MoveFileW", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxW(NULL, redirectedPathExisting.c_str(), L"Mine_MoveFileW", MB_OK | MB_SYSTEMMODAL);
     return Real_MoveFileW(redirectedPathExisting.c_str(), redirectedPathNew.c_str());
 }
 
@@ -657,7 +656,7 @@ Mine_MoveFileExA(
         return Real_MoveFileExA(redirectedPathExisting.c_str(), redirectedPathNew.c_str(), dwFlags);
     }
 
-    MessageBoxA(NULL, redirectedPathExisting.c_str(), "Mine_MoveFileExA", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxA(NULL, redirectedPathExisting.c_str(), "Mine_MoveFileExA", MB_OK | MB_SYSTEMMODAL);
     return Real_MoveFileExA(redirectedPathExisting.c_str(), lpNewFileName, dwFlags);
 }
 
@@ -697,7 +696,7 @@ Mine_MoveFileExW(
         return Real_MoveFileExW(redirectedPathExisting.c_str(), redirectedPathNew.c_str(), dwFlags);
     }
 
-    MessageBoxW(NULL, redirectedPathExisting.c_str(), L"Mine_MoveFileExW", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxW(NULL, redirectedPathExisting.c_str(), L"Mine_MoveFileExW", MB_OK | MB_SYSTEMMODAL);
     return Real_MoveFileExW(redirectedPathExisting.c_str(), lpNewFileName, dwFlags);
 }
 
@@ -778,7 +777,7 @@ Mine_FindFirstFileExA(
         redirectedPath = lpFileName;
     }
 
-    MessageBoxA(NULL, redirectedPath.c_str(), "Mine_FindFirstFileExA", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxA(NULL, redirectedPath.c_str(), "Mine_FindFirstFileExA", MB_OK | MB_SYSTEMMODAL);
     return Real_FindFirstFileExA(redirectedPath.c_str(), fInfoLevelId, lpFindFileData, fSearchOp, lpSearchFilter, dwAdditionalFlags);
 }
 
@@ -807,7 +806,7 @@ Mine_FindFirstFileExW(
         redirectedPath = lpFileName;
     }
 
-    MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_FindFirstFileExW", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_FindFirstFileExW", MB_OK | MB_SYSTEMMODAL);
     return Real_FindFirstFileExW(redirectedPath.c_str(), fInfoLevelId, lpFindFileData, fSearchOp, lpSearchFilter, dwAdditionalFlags);
 }
 
