@@ -64,6 +64,14 @@ Testcases:
 2. Add notepad.txt in monitor list and perform operation from this process.
 3. launch dbgview to see json format monitor process information.
 
+Pending:
+1. Sending process information to webhook server is pending.
+	- When I linked libcurl to injection DLL it stop injecting into processes.
+2. Testing on 32 bit enviornment is pending
+
+Known issues:
+1. Rarely I observed ReadProcessMemory related one issue while injecting DLL into monitor process.
+
 
 	
  
