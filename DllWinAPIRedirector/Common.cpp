@@ -1,5 +1,4 @@
 #include"pch.h"
-#include "Common.h"
 
 void DbgViewf(LPCTSTR format, ...)
 {

@@ -1,17 +1,11 @@
 // dllmain.cpp : Defines the entry point for the DLL application.
 #include "pch.h"
-#include "detours.h"
-#include "WinAPI.h"
-#include "Common.h"
 
 WCHAR g_szExePath[MAX_PATH];
 WCHAR g_szDllPath[MAX_PATH];
 HMODULE g_hModule = NULL;
 
 std::unique_ptr<WinAPIRedirector> WinAPIRedirector::s_winAPIRedirector = nullptr;
-
-//#define SOURCE_DIR_PATH L"C:\\Users\\lenovo\\Documents\\Important"
-//#define REDIRECT_DIR_PATH L"C:\\Users\\Public\\Documents\\Important"
 
 BOOL ProcessAttach(HMODULE hDll)
 {
@@ -64,7 +58,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
         DbgViewf(L"%s, %s\n", __FUNCTIONW__, g_szExePath);
         DbgViewf(L"Hook DLL has been loaded to [%s]", g_szExePath);
-        //MessageBoxW(NULL, g_szExePath, L"start", MB_OK | MB_SYSTEMMODAL);
+        MessageBoxW(NULL, g_szExePath, L"start", MB_OK | MB_SYSTEMMODAL);
         DetourRestoreAfterWith();
         BOOL boRet = WinAPIRedirector::Init();
         return boRet;

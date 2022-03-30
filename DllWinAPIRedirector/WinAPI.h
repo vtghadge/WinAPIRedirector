@@ -24,7 +24,8 @@ public:
 
 	~WinAPIRedirector();
 
-	bool IsOperationInterested(std::wstring& path, DWORD dwDesiredAccess, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, std::wstring& redirectedPath);
+	bool IsOperationInterested(std::wstring& path, std::wstring& redirectedPath);
+	bool IsOperationInterestedA(std::string& path, std::string& redirectedPath);
 
 	bool OnHandleCreation(HANDLE hfile, std::wstring& originalPath, std::wstring& redirectedPath);
 	bool OnHandleClose(HANDLE hfile);

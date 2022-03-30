@@ -31,6 +31,104 @@ BOOL
     _In_ _Post_ptr_invalid_ HANDLE hObject
 ) = CloseHandle;
 
+BOOL
+(WINAPI *Real_CopyFileA)(
+    _In_ LPCSTR lpExistingFileName,
+    _In_ LPCSTR lpNewFileName,
+    _In_ BOOL bFailIfExists
+)= CopyFileA;
+
+BOOL
+(WINAPI *Real_CopyFileW)(
+    _In_ LPCWSTR lpExistingFileName,
+    _In_ LPCWSTR lpNewFileName,
+    _In_ BOOL bFailIfExists
+)= CopyFileW;
+
+BOOL
+(WINAPI *Real_CopyFileExA)(
+    _In_        LPCSTR lpExistingFileName,
+    _In_        LPCSTR lpNewFileName,
+    _In_opt_    LPPROGRESS_ROUTINE lpProgressRoutine,
+    _In_opt_    LPVOID lpData,
+    _When_(pbCancel != NULL, _Pre_satisfies_(*pbCancel == FALSE))
+    _Inout_opt_ LPBOOL pbCancel,
+    _In_        DWORD dwCopyFlags
+)= CopyFileExA;
+
+BOOL
+(WINAPI *Real_CopyFileExW)(
+    _In_        LPCWSTR lpExistingFileName,
+    _In_        LPCWSTR lpNewFileName,
+    _In_opt_    LPPROGRESS_ROUTINE lpProgressRoutine,
+    _In_opt_    LPVOID lpData,
+    _When_(pbCancel != NULL, _Pre_satisfies_(*pbCancel == FALSE))
+    _Inout_opt_ LPBOOL pbCancel,
+    _In_        DWORD dwCopyFlags
+)= CopyFileExW;
+
+BOOL
+(WINAPI *Real_DeleteFileA)(
+    _In_ LPCSTR lpFileName
+)= DeleteFileA;
+
+BOOL
+(WINAPI *Real_DeleteFileW)(
+    _In_ LPCWSTR lpFileName
+)= DeleteFileW;
+
+BOOL
+(WINAPI *Real_CreateDirectoryA)(
+    _In_ LPCSTR lpPathName,
+    _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes
+)= CreateDirectoryA;
+
+BOOL
+(WINAPI *Real_CreateDirectoryW)(
+    _In_ LPCWSTR lpPathName,
+    _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes
+)= CreateDirectoryW;
+
+BOOL
+(WINAPI *Real_MoveFileA)(
+    _In_ LPCSTR lpExistingFileName,
+    _In_ LPCSTR lpNewFileName
+)= MoveFileA;
+
+BOOL
+(WINAPI *Real_MoveFileW)(
+    _In_ LPCWSTR lpExistingFileName,
+    _In_ LPCWSTR lpNewFileName
+)= MoveFileW;
+
+BOOL
+(WINAPI *Real_MoveFileExA)(
+    _In_     LPCSTR lpExistingFileName,
+    _In_opt_ LPCSTR lpNewFileName,
+    _In_     DWORD    dwFlags
+)= MoveFileExA;
+
+BOOL
+(WINAPI *Real_MoveFileExW)(
+    _In_     LPCWSTR lpExistingFileName,
+    _In_opt_ LPCWSTR lpNewFileName,
+    _In_     DWORD    dwFlags
+)= MoveFileExW;
+
+HANDLE
+(WINAPI *Real_FindFirstFileA)(
+    _In_ LPCSTR lpFileName,
+    _Out_ LPWIN32_FIND_DATAA lpFindFileData
+)= FindFirstFileA;
+
+HANDLE
+(WINAPI *Real_FindFirstFileW)(
+    _In_ LPCWSTR lpFileName,
+    _Out_ LPWIN32_FIND_DATAW lpFindFileData
+)= FindFirstFileW;
+
+//===========================================================================================
+
 HANDLE
 WINAPI
 Mine_CreateFileW(
@@ -43,11 +141,16 @@ Mine_CreateFileW(
     _In_opt_ HANDLE hTemplateFile
 )
 {
+    if (NULL == lpFileName)
+    {
+        return Real_CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    }
+
     HANDLE hFile;
     std::wstring path = lpFileName;
     std::wstring redirectedPath;
 
-    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(path, dwDesiredAccess, dwCreationDisposition, dwFlagsAndAttributes, redirectedPath);
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(path, redirectedPath);
     if (!boInterested)
     {
         return Real_CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
@@ -76,12 +179,17 @@ Mine_CreateFileA(
     _In_opt_ HANDLE hTemplateFile
 )
 {
+    if (NULL == lpFileName)
+    {
+        return Real_CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    }
+
     HANDLE hFile;
     std::string pathA = lpFileName;
     std::wstring pathW = ConvertStringToWstring(pathA);
     std::wstring redirectedPathW;
 
-    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(pathW, dwDesiredAccess, dwCreationDisposition, dwFlagsAndAttributes, redirectedPathW);
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(pathW, redirectedPathW);
     if (!boInterested)
     {
         return Real_CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
@@ -116,6 +224,455 @@ Mine_CloseHandle(
     return Real_CloseHandle(hObject);
 }
 
+
+BOOL
+WINAPI
+Mine_CopyFileA(
+    _In_ LPCSTR lpExistingFileName,
+    _In_ LPCSTR lpNewFileName,
+    _In_ BOOL bFailIfExists
+)
+{
+    if (NULL == lpExistingFileName || NULL == lpNewFileName)
+    {
+        return Real_CopyFileA(lpExistingFileName, lpNewFileName, bFailIfExists);
+    }
+
+    std::string existingPath = lpExistingFileName;
+    std::string newPath = lpNewFileName;
+    std::string redirectedPathExisting;
+    std::string redirectedPathNew;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterestedA(existingPath, redirectedPathExisting);
+    if (!boInterested)
+    {
+        redirectedPathExisting = lpExistingFileName;
+    }
+
+    boInterested = WinAPIRedirector::GetInstance()->IsOperationInterestedA(newPath, redirectedPathNew);
+    if (!boInterested)
+    {
+        redirectedPathNew = lpNewFileName;
+    }
+
+    MessageBoxA(NULL, redirectedPathExisting.c_str(), "Mine_CopyFileA", MB_OK | MB_SYSTEMMODAL);
+    return Real_CopyFileA(redirectedPathExisting.c_str(), redirectedPathNew.c_str(), bFailIfExists);
+}
+
+
+BOOL
+WINAPI
+Mine_CopyFileW(
+    _In_ LPCWSTR lpExistingFileName,
+    _In_ LPCWSTR lpNewFileName,
+    _In_ BOOL bFailIfExists
+)
+{
+    if (NULL == lpExistingFileName || NULL == lpNewFileName)
+    {
+        return Real_CopyFileW(lpExistingFileName, lpNewFileName, bFailIfExists);
+    }
+
+    std::wstring existingPath = lpExistingFileName;
+    std::wstring newPath = lpNewFileName;
+    std::wstring redirectedPathExisting;
+    std::wstring redirectedPathNew;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(existingPath, redirectedPathExisting);
+    if (!boInterested)
+    {
+        redirectedPathExisting = lpExistingFileName;
+    }
+
+    boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(newPath, redirectedPathNew);
+    if (!boInterested)
+    {
+        redirectedPathNew = lpNewFileName;
+    }
+
+    MessageBoxW(NULL, redirectedPathExisting.c_str(), L"Mine_CopyFileExW", MB_OK | MB_SYSTEMMODAL);
+    return Real_CopyFileW(redirectedPathExisting.c_str(), redirectedPathNew.c_str(), bFailIfExists);
+}
+
+
+BOOL
+WINAPI
+Mine_CopyFileExA(
+    _In_        LPCSTR lpExistingFileName,
+    _In_        LPCSTR lpNewFileName,
+    _In_opt_    LPPROGRESS_ROUTINE lpProgressRoutine,
+    _In_opt_    LPVOID lpData,
+    _When_(pbCancel != NULL, _Pre_satisfies_(*pbCancel == FALSE))
+    _Inout_opt_ LPBOOL pbCancel,
+    _In_        DWORD dwCopyFlags
+)
+{
+    if (NULL == lpExistingFileName || NULL == lpNewFileName)
+    {
+        return Real_CopyFileExA(lpExistingFileName, lpNewFileName, lpProgressRoutine, lpData, pbCancel, dwCopyFlags);
+    }
+
+    std::string existingPath = lpExistingFileName;
+    std::string newPath = lpNewFileName;
+    std::string redirectedPathExisting;
+    std::string redirectedPathNew;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterestedA(existingPath, redirectedPathExisting);
+    if (!boInterested)
+    {
+        redirectedPathExisting = lpExistingFileName;
+    }
+
+    boInterested = WinAPIRedirector::GetInstance()->IsOperationInterestedA(newPath, redirectedPathNew);
+    if (!boInterested)
+    {
+        redirectedPathNew = lpNewFileName;
+    }
+
+    MessageBoxA(NULL, redirectedPathExisting.c_str(), "Mine_CopyFileExA", MB_OK | MB_SYSTEMMODAL);
+    return Real_CopyFileExA(redirectedPathExisting.c_str(), redirectedPathNew.c_str(), lpProgressRoutine, lpData, pbCancel, dwCopyFlags);
+}
+
+BOOL
+WINAPI
+Mine_CopyFileExW(
+    _In_        LPCWSTR lpExistingFileName,
+    _In_        LPCWSTR lpNewFileName,
+    _In_opt_    LPPROGRESS_ROUTINE lpProgressRoutine,
+    _In_opt_    LPVOID lpData,
+    _When_(pbCancel != NULL, _Pre_satisfies_(*pbCancel == FALSE))
+    _Inout_opt_ LPBOOL pbCancel,
+    _In_        DWORD dwCopyFlags
+)
+{
+    if (NULL == lpExistingFileName || NULL == lpNewFileName)
+    {
+        return Real_CopyFileExW(lpExistingFileName, lpNewFileName, lpProgressRoutine, lpData, pbCancel, dwCopyFlags);
+    }
+
+    std::wstring existingPath = lpExistingFileName;
+    std::wstring newPath = lpNewFileName;
+    std::wstring redirectedPathExisting;
+    std::wstring redirectedPathNew;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(existingPath, redirectedPathExisting);
+    if (!boInterested)
+    {
+        redirectedPathExisting = lpExistingFileName;
+    }
+
+    boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(newPath, redirectedPathNew);
+    if (!boInterested)
+    {
+        redirectedPathNew = lpNewFileName;
+    }
+
+    MessageBoxW(NULL, redirectedPathExisting.c_str(), L"Mine_CopyFileExW", MB_OK | MB_SYSTEMMODAL);
+    return Real_CopyFileExW(redirectedPathExisting.c_str(), redirectedPathNew.c_str(), lpProgressRoutine, lpData, pbCancel, dwCopyFlags);
+}
+
+BOOL
+WINAPI
+Mine_DeleteFileA(
+    _In_ LPCSTR lpFileName
+)
+{
+    if (NULL == lpFileName)
+    {
+        return Real_DeleteFileA(lpFileName);
+    }
+
+    std::string path = lpFileName;
+    std::string redirectedPath;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterestedA(path, redirectedPath);
+    if (!boInterested)
+    {
+        redirectedPath = lpFileName;
+    }
+
+    MessageBoxA(NULL, redirectedPath.c_str(), "Mine_DeleteFileA", MB_OK | MB_SYSTEMMODAL);
+    return Real_DeleteFileA(redirectedPath.c_str());
+}
+
+
+BOOL
+WINAPI
+Mine_DeleteFileW(
+    _In_ LPCWSTR lpFileName
+)
+{
+    if (NULL == lpFileName)
+    {
+        return Real_DeleteFileW(lpFileName);
+    }
+
+    std::wstring path = lpFileName;
+    std::wstring redirectedPath;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(path, redirectedPath);
+    if (!boInterested)
+    {
+        redirectedPath = lpFileName;
+    }
+
+    MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_DeleteFileW", MB_OK | MB_SYSTEMMODAL);
+    return Real_DeleteFileW(redirectedPath.c_str());
+}
+
+
+BOOL
+WINAPI
+Mine_CreateDirectoryA(
+    _In_ LPCSTR lpPathName,
+    _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes
+)
+{
+    if (NULL == lpPathName)
+    {
+        return Real_CreateDirectoryA(lpPathName, lpSecurityAttributes);
+    }
+
+    std::string path = lpPathName;
+    std::string redirectedPath;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterestedA(path, redirectedPath);
+    if (!boInterested)
+    {
+        redirectedPath = lpPathName;
+    }
+    //MessageBoxA(NULL, redirectedPath.c_str(), "Mine_CreateDirectoryA", MB_OK | MB_SYSTEMMODAL);
+
+
+    return Real_CreateDirectoryA(redirectedPath.c_str(), lpSecurityAttributes);
+}
+
+
+BOOL
+WINAPI
+Mine_CreateDirectoryW(
+    _In_ LPCWSTR lpPathName,
+    _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes
+)
+{
+    if (NULL == lpPathName)
+    {
+        return Real_CreateDirectoryW(lpPathName, lpSecurityAttributes);
+    }
+
+    std::wstring path = lpPathName;
+    std::wstring redirectedPath;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(path, redirectedPath);
+    if (!boInterested)
+    {
+        redirectedPath = lpPathName;
+    }
+    //MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_CreateDirectoryW", MB_OK | MB_SYSTEMMODAL);
+
+    return Real_CreateDirectoryW(redirectedPath.c_str(), lpSecurityAttributes);
+}
+
+
+BOOL
+WINAPI
+Mine_MoveFileA(
+    _In_ LPCSTR lpExistingFileName,
+    _In_ LPCSTR lpNewFileName
+)
+{
+    if (NULL == lpExistingFileName || NULL == lpNewFileName)
+    {
+        return Real_MoveFileA(lpExistingFileName, lpNewFileName);
+    }
+
+    std::string existingPath = lpExistingFileName;
+    std::string newPath = lpNewFileName;
+    std::string redirectedPathExisting;
+    std::string redirectedPathNew;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterestedA(existingPath, redirectedPathExisting);
+    if (!boInterested)
+    {
+        redirectedPathExisting = lpExistingFileName;
+    }
+
+    boInterested = WinAPIRedirector::GetInstance()->IsOperationInterestedA(newPath, redirectedPathNew);
+    if (!boInterested)
+    {
+        redirectedPathNew = lpNewFileName;
+    }
+
+    MessageBoxA(NULL, redirectedPathExisting.c_str(), "Mine_MoveFileA", MB_OK | MB_SYSTEMMODAL);
+    return Real_MoveFileA(redirectedPathExisting.c_str(), redirectedPathNew.c_str());
+}
+
+BOOL
+WINAPI
+Mine_MoveFileW(
+    _In_ LPCWSTR lpExistingFileName,
+    _In_ LPCWSTR lpNewFileName
+)
+{
+    if (NULL == lpExistingFileName || NULL == lpNewFileName)
+    {
+        return Real_MoveFileW(lpExistingFileName, lpNewFileName);
+    }
+
+    std::wstring existingPath = lpExistingFileName;
+    std::wstring newPath = lpNewFileName;
+    std::wstring redirectedPathExisting;
+    std::wstring redirectedPathNew;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(existingPath, redirectedPathExisting);
+    if (!boInterested)
+    {
+        redirectedPathExisting = lpExistingFileName;
+    }
+
+    boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(newPath, redirectedPathNew);
+    if (!boInterested)
+    {
+        redirectedPathNew = lpNewFileName;
+    }
+
+    MessageBoxW(NULL, redirectedPathExisting.c_str(), L"Mine_MoveFileW", MB_OK | MB_SYSTEMMODAL);
+    return Real_MoveFileW(redirectedPathExisting.c_str(), redirectedPathNew.c_str());
+}
+
+
+BOOL
+WINAPI
+Mine_MoveFileExA(
+    _In_     LPCSTR lpExistingFileName,
+    _In_opt_ LPCSTR lpNewFileName,
+    _In_     DWORD    dwFlags
+)
+{
+    if (NULL == lpExistingFileName)
+    {
+        return Real_MoveFileExA(lpExistingFileName, lpNewFileName, dwFlags);
+    }
+
+    std::string existingPath = lpExistingFileName;
+    std::string redirectedPathExisting;
+    std::string newPath;
+    std::string redirectedPathNew;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterestedA(existingPath, redirectedPathExisting);
+    if (!boInterested)
+    {
+        redirectedPathExisting = lpExistingFileName;
+    }
+
+    if (NULL != lpNewFileName)
+    {
+        newPath = lpNewFileName;
+        boInterested = WinAPIRedirector::GetInstance()->IsOperationInterestedA(newPath, redirectedPathNew);
+        if (!boInterested)
+        {
+            redirectedPathNew = lpNewFileName;
+        }
+
+        return Real_MoveFileExA(redirectedPathExisting.c_str(), redirectedPathNew.c_str(), dwFlags);
+    }
+
+    MessageBoxA(NULL, redirectedPathExisting.c_str(), "Mine_MoveFileExA", MB_OK | MB_SYSTEMMODAL);
+    return Real_MoveFileExA(redirectedPathExisting.c_str(), lpNewFileName, dwFlags);
+}
+
+BOOL
+WINAPI
+Mine_MoveFileExW(
+    _In_     LPCWSTR lpExistingFileName,
+    _In_opt_ LPCWSTR lpNewFileName,
+    _In_     DWORD    dwFlags
+)
+{
+    if (NULL == lpExistingFileName)
+    {
+        return Real_MoveFileExW(lpExistingFileName, lpNewFileName, dwFlags);
+    }
+
+    std::wstring existingPath = lpExistingFileName;
+    std::wstring redirectedPathExisting;
+    std::wstring newPath;
+    std::wstring redirectedPathNew;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(existingPath, redirectedPathExisting);
+    if (!boInterested)
+    {
+        redirectedPathExisting = lpExistingFileName;
+    }
+
+    if (NULL != lpNewFileName)
+    {
+        newPath = lpNewFileName;
+        boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(newPath, redirectedPathNew);
+        if (!boInterested)
+        {
+            redirectedPathNew = lpNewFileName;
+        }
+
+        return Real_MoveFileExW(redirectedPathExisting.c_str(), redirectedPathNew.c_str(), dwFlags);
+    }
+
+    MessageBoxW(NULL, redirectedPathExisting.c_str(), L"Mine_MoveFileExW", MB_OK | MB_SYSTEMMODAL);
+    return Real_MoveFileExW(redirectedPathExisting.c_str(), lpNewFileName, dwFlags);
+}
+
+
+HANDLE
+WINAPI
+Mine_FindFirstFileA(
+    _In_ LPCSTR lpFileName,
+    _Out_ LPWIN32_FIND_DATAA lpFindFileData
+)
+{
+    if (NULL == lpFileName)
+    {
+        return Real_FindFirstFileA(lpFileName, lpFindFileData);
+    }
+
+    std::string path = lpFileName;
+    std::string redirectedPath;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterestedA(path, redirectedPath);
+    if (!boInterested)
+    {
+        redirectedPath = lpFileName;
+    }
+
+    MessageBoxA(NULL, redirectedPath.c_str(), "Mine_FindFirstFileA", MB_OK | MB_SYSTEMMODAL);
+    return Real_FindFirstFileA(redirectedPath.c_str(), lpFindFileData);
+}
+
+
+HANDLE
+WINAPI
+Mine_FindFirstFileW(
+    _In_ LPCWSTR lpFileName,
+    _Out_ LPWIN32_FIND_DATAW lpFindFileData
+)
+{
+    if (NULL == lpFileName)
+    {
+        return Real_FindFirstFileW(lpFileName, lpFindFileData);
+    }
+
+    std::wstring path = lpFileName;
+    std::wstring redirectedPath;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(path, redirectedPath);
+    if (!boInterested)
+    {
+        redirectedPath = lpFileName;
+    }
+
+    MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_FindFirstFileW", MB_OK | MB_SYSTEMMODAL);
+    return Real_FindFirstFileW(redirectedPath.c_str(), lpFindFileData);
+}
+
 VOID DetAttach(PVOID* ppvReal, PVOID pvMine, const char* psz)
 {
     PVOID pvReal = NULL;
@@ -145,6 +702,20 @@ LONG AttachDetours(VOID)
     ATTACH(CreateFileW);
     ATTACH(CreateFileA);
     ATTACH(CloseHandle);
+    ATTACH(CopyFileA);
+    ATTACH(CopyFileW);
+    ATTACH(CopyFileExA);
+    ATTACH(CopyFileExW);
+    ATTACH(DeleteFileA);
+    ATTACH(DeleteFileW);
+    ATTACH(CreateDirectoryA);
+    ATTACH(CreateDirectoryW);
+    ATTACH(MoveFileA);
+    ATTACH(MoveFileW);
+    ATTACH(MoveFileExA);
+    ATTACH(MoveFileExW);
+    ATTACH(FindFirstFileA);
+    ATTACH(FindFirstFileW);
 
     PVOID* ppbFailedPointer = NULL;
     LONG error = DetourTransactionCommitEx(&ppbFailedPointer);
@@ -226,7 +797,6 @@ bool WinAPIRedirector::Init()
 
     if (nullptr == s_winAPIRedirector)
     {
-        //s_winAPIRedirector = std::make_unique<WinAPIRedirector>(srcDirPath, redirectDirPath);
         s_winAPIRedirector.reset(new WinAPIRedirector(srcDirPath, redirectDirPath));
     }
 
@@ -282,13 +852,27 @@ WinAPIRedirector::HandleInfo::HandleInfo(std::wstring originalPath, std::wstring
 {
 }
 
-bool WinAPIRedirector::IsOperationInterested(std::wstring& path, DWORD dwDesiredAccess, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, std::wstring &redirectedPath)
+bool WinAPIRedirector::IsOperationInterested(std::wstring& path, std::wstring &redirectedPath)
 {
     if (false == CheckIfSourcePathLocation(path, redirectedPath))
     {
         return false;
     }
 
+    return true;
+}
+
+bool WinAPIRedirector::IsOperationInterestedA(std::string& path, std::string& redirectedPath)
+{
+    std::wstring pathW = ConvertStringToWstring(path);
+    std::wstring redirectedPathW;
+
+    if (false == CheckIfSourcePathLocation(pathW, redirectedPathW))
+    {
+        return false;
+    }
+
+    redirectedPath = ConvertWstringToString(redirectedPathW);
     return true;
 }
 
