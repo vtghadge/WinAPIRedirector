@@ -28,10 +28,9 @@ Modules:
 5. TestInjection: sample tool to try DLL injection into the process.
 
 
-Config.ini: This is a config file and must be present in the product directory. DllWinAPIRedirector and ProcessNotification modules use this file.
-
-Format:
+Config.ini Format:
 ===========
+Config.ini: This is a config file and must be present in the product directory. DllWinAPIRedirector and ProcessNotification modules use this file.
 
 [ProcessName]
 Filetest.exe
