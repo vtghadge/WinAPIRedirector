@@ -29,8 +29,9 @@ Modules:
 
 
 Config.ini: This is a config file and must be present in the product directory. DllWinAPIRedirector and ProcessNotification modules use this file.
-===========
+
 Format:
+===========
 
 [ProcessName]
 Filetest.exe
