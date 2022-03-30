@@ -1,6 +1,7 @@
 #pragma once
 
 void DbgViewf(LPCTSTR format, ...);
+void DbgViewfA(LPCSTR format, ...);
 
 bool FileExists(const std::wstring& path);
 void ToLowerCase(std::wstring& path);

@@ -23,6 +23,29 @@ void DbgViewf(LPCTSTR format, ...)
     }
 }
 
+void DbgViewfA(LPCSTR format, ...)
+{
+    char buffer[512];
+    char* p = buffer;
+    va_list args;
+
+    va_start(args, format);
+    if (_vsnprintf_s(p, 512, _TRUNCATE, format, args) == -1)
+    {
+        int size = _vscprintf(format, args) + 1;
+        p = (char*)malloc(sizeof(char) * size);
+        if (p != NULL)
+            _vsnprintf_s(p, size, _TRUNCATE, format, args);
+    }
+    va_end(args);
+
+    if (p != NULL)
+    {
+        OutputDebugStringA(p);
+        if (p != buffer) free(p);
+    }
+}
+
 
 bool WstringCompareNoCase(const std::wstring& a, const std::wstring& b)
 {

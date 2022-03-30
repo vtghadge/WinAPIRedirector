@@ -65,6 +65,8 @@ bool ProcessInfo::InitProcessInfo()
 	std::string serializeProcessData;
 	Serialize(serializeProcessData);
 
+	DbgViewfA("\n Process Information: \n (%s)\n", serializeProcessData.c_str());
+
 	return true;
 }
 
