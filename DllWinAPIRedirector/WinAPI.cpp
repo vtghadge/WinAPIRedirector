@@ -89,6 +89,17 @@ BOOL
     _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes
 )= CreateDirectoryW;
 
+
+BOOL
+(WINAPI *Real_RemoveDirectoryA)(
+    _In_ LPCSTR lpPathName
+)= RemoveDirectoryA;
+
+BOOL
+(WINAPI *Real_RemoveDirectoryW)(
+    _In_ LPCWSTR lpPathName
+)= RemoveDirectoryW;
+
 BOOL
 (WINAPI *Real_MoveFileA)(
     _In_ LPCSTR lpExistingFileName,
@@ -126,6 +137,26 @@ HANDLE
     _In_ LPCWSTR lpFileName,
     _Out_ LPWIN32_FIND_DATAW lpFindFileData
 )= FindFirstFileW;
+
+HANDLE
+(WINAPI *Real_FindFirstFileExA)(
+    _In_ LPCSTR lpFileName,
+    _In_ FINDEX_INFO_LEVELS fInfoLevelId,
+    _Out_writes_bytes_(sizeof(WIN32_FIND_DATAA)) LPVOID lpFindFileData,
+    _In_ FINDEX_SEARCH_OPS fSearchOp,
+    _Reserved_ LPVOID lpSearchFilter,
+    _In_ DWORD dwAdditionalFlags
+)= FindFirstFileExA;
+
+HANDLE
+(WINAPI *Real_FindFirstFileExW)(
+    _In_ LPCWSTR lpFileName,
+    _In_ FINDEX_INFO_LEVELS fInfoLevelId,
+    _Out_writes_bytes_(sizeof(WIN32_FIND_DATAW)) LPVOID lpFindFileData,
+    _In_ FINDEX_SEARCH_OPS fSearchOp,
+    _Reserved_ LPVOID lpSearchFilter,
+    _In_ DWORD dwAdditionalFlags
+)= FindFirstFileExW;
 
 //===========================================================================================
 
@@ -476,6 +507,55 @@ Mine_CreateDirectoryW(
 
 BOOL
 WINAPI
+Mine_RemoveDirectoryA(
+    _In_ LPCSTR lpPathName
+)
+{
+    if (NULL == lpPathName)
+    {
+        return Real_RemoveDirectoryA(lpPathName);
+    }
+
+    std::string path = lpPathName;
+    std::string redirectedPath;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterestedA(path, redirectedPath);
+    if (!boInterested)
+    {
+        redirectedPath = lpPathName;
+    }
+    MessageBoxA(NULL, redirectedPath.c_str(), "Mine_RemoveDirectoryW", MB_OK | MB_SYSTEMMODAL);
+
+    return Real_RemoveDirectoryA(redirectedPath.c_str());
+}
+
+BOOL
+WINAPI
+Mine_RemoveDirectoryW(
+    _In_ LPCWSTR lpPathName
+)
+{
+    if (NULL == lpPathName)
+    {
+        return Real_RemoveDirectoryW(lpPathName);
+    }
+
+    std::wstring path = lpPathName;
+    std::wstring redirectedPath;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(path, redirectedPath);
+    if (!boInterested)
+    {
+        redirectedPath = lpPathName;
+    }
+    MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_RemoveDirectoryW", MB_OK | MB_SYSTEMMODAL);
+
+    return Real_RemoveDirectoryW(redirectedPath.c_str());
+}
+
+
+BOOL
+WINAPI
 Mine_MoveFileA(
     _In_ LPCSTR lpExistingFileName,
     _In_ LPCSTR lpNewFileName
@@ -643,7 +723,7 @@ Mine_FindFirstFileA(
         redirectedPath = lpFileName;
     }
 
-    MessageBoxA(NULL, redirectedPath.c_str(), "Mine_FindFirstFileA", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxA(NULL, redirectedPath.c_str(), "Mine_FindFirstFileA", MB_OK | MB_SYSTEMMODAL);
     return Real_FindFirstFileA(redirectedPath.c_str(), lpFindFileData);
 }
 
@@ -669,8 +749,66 @@ Mine_FindFirstFileW(
         redirectedPath = lpFileName;
     }
 
-    MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_FindFirstFileW", MB_OK | MB_SYSTEMMODAL);
+    //MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_FindFirstFileW", MB_OK | MB_SYSTEMMODAL);
     return Real_FindFirstFileW(redirectedPath.c_str(), lpFindFileData);
+}
+
+HANDLE
+WINAPI
+Mine_FindFirstFileExA(
+    _In_ LPCSTR lpFileName,
+    _In_ FINDEX_INFO_LEVELS fInfoLevelId,
+    _Out_writes_bytes_(sizeof(WIN32_FIND_DATAA)) LPVOID lpFindFileData,
+    _In_ FINDEX_SEARCH_OPS fSearchOp,
+    _Reserved_ LPVOID lpSearchFilter,
+    _In_ DWORD dwAdditionalFlags
+)
+{
+    if (NULL == lpFileName)
+    {
+        return Real_FindFirstFileExA(lpFileName, fInfoLevelId, lpFindFileData, fSearchOp, lpSearchFilter, dwAdditionalFlags);
+    }
+
+    std::string path = lpFileName;
+    std::string redirectedPath;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterestedA(path, redirectedPath);
+    if (!boInterested)
+    {
+        redirectedPath = lpFileName;
+    }
+
+    MessageBoxA(NULL, redirectedPath.c_str(), "Mine_FindFirstFileExA", MB_OK | MB_SYSTEMMODAL);
+    return Real_FindFirstFileExA(redirectedPath.c_str(), fInfoLevelId, lpFindFileData, fSearchOp, lpSearchFilter, dwAdditionalFlags);
+}
+
+HANDLE
+WINAPI
+Mine_FindFirstFileExW(
+    _In_ LPCWSTR lpFileName,
+    _In_ FINDEX_INFO_LEVELS fInfoLevelId,
+    _Out_writes_bytes_(sizeof(WIN32_FIND_DATAW)) LPVOID lpFindFileData,
+    _In_ FINDEX_SEARCH_OPS fSearchOp,
+    _Reserved_ LPVOID lpSearchFilter,
+    _In_ DWORD dwAdditionalFlags
+)
+{
+    if (NULL == lpFileName)
+    {
+        return Real_FindFirstFileExW(lpFileName, fInfoLevelId, lpFindFileData, fSearchOp, lpSearchFilter, dwAdditionalFlags);
+    }
+
+    std::wstring path = lpFileName;
+    std::wstring redirectedPath;
+
+    bool boInterested = WinAPIRedirector::GetInstance()->IsOperationInterested(path, redirectedPath);
+    if (!boInterested)
+    {
+        redirectedPath = lpFileName;
+    }
+
+    MessageBoxW(NULL, redirectedPath.c_str(), L"Mine_FindFirstFileExW", MB_OK | MB_SYSTEMMODAL);
+    return Real_FindFirstFileExW(redirectedPath.c_str(), fInfoLevelId, lpFindFileData, fSearchOp, lpSearchFilter, dwAdditionalFlags);
 }
 
 VOID DetAttach(PVOID* ppvReal, PVOID pvMine, const char* psz)
@@ -710,12 +848,16 @@ LONG AttachDetours(VOID)
     ATTACH(DeleteFileW);
     ATTACH(CreateDirectoryA);
     ATTACH(CreateDirectoryW);
+    ATTACH(RemoveDirectoryA);
+    ATTACH(RemoveDirectoryW);
     ATTACH(MoveFileA);
     ATTACH(MoveFileW);
     ATTACH(MoveFileExA);
     ATTACH(MoveFileExW);
     ATTACH(FindFirstFileA);
     ATTACH(FindFirstFileW);
+    //ATTACH(FindFirstFileExA);
+    //ATTACH(FindFirstFileExW);
 
     PVOID* ppbFailedPointer = NULL;
     LONG error = DetourTransactionCommitEx(&ppbFailedPointer);
