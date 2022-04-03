@@ -273,6 +273,16 @@ bool ProcessNotification::InjectInProcess(std::wstring path, ULONG ulProcessId)
 
 	bool boRet = InjectDLL(ulProcessId);
 
+	if (true == boRet)
+	{
+		CHAR szJsonData[MAX_PATH];
+		std::string URL = "https://webhook.site/cc73f40a-f803-4894-9bc7-5d53af4aad17";
+		std::string header = "Content-Type: application/json";
+		StringCchPrintfA(szJsonData, ARRAYSIZE(szJsonData), "{\"ProcessPath\":\"%S\"}", path.c_str());
+		std::string serializeBuffer = szJsonData;
+		SendProcessEventToServer(URL, header, serializeBuffer);
+	}
+
 	return boRet;
 }
 

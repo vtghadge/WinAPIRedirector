@@ -193,3 +193,91 @@ void ExtractProcessName(std::wstring& processPath)
 		processPath.erase(0, pos + 1);
 	}
 }
+
+bool SendProcessEventToServer(std::string URL, std::string header, std::string jsonData)
+{
+	CURLcode CurlError;
+	CURL* pCurlHandle = NULL;
+	char chCurlErrorBuffer[CURL_ERROR_SIZE + 1];
+
+	CurlError = curl_global_init(CURL_GLOBAL_DEFAULT);
+	if (CURLE_OK != CurlError)
+	{
+		std::string strLog = curl_easy_strerror(CurlError);
+		return false;
+	}
+
+	pCurlHandle = curl_easy_init();
+	if (NULL == pCurlHandle)
+	{
+		curl_global_cleanup();
+		return false;
+	}
+
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_ERRORBUFFER, chCurlErrorBuffer))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_VERBOSE, 0L))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_CONNECTTIMEOUT, 30))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_URL, URL.c_str()))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_SSL_VERIFYPEER, true))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_SSL_VERIFYHOST, 2L))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_POST, 1L))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+	if (0 != curl_easy_setopt(pCurlHandle, CURLOPT_POSTFIELDS, jsonData.c_str()))
+	{
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+
+	int iRetVal = curl_easy_perform(pCurlHandle);
+	if (0 != iRetVal)
+	{
+		std::string strLog = curl_easy_strerror((CURLcode)iRetVal);
+		strLog = "curl_easy_perform() Failed : " + strLog + "";
+		strLog = std::string(chCurlErrorBuffer) + "";
+
+		curl_easy_cleanup(pCurlHandle);
+		curl_global_cleanup();
+		return false;
+	}
+
+	return true;
+}

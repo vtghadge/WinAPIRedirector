@@ -9,3 +9,4 @@ bool StartDriver();
 bool StopDriver();
 void ToLowerCase(std::wstring& path);
 void ExtractProcessName(std::wstring& processPath);
+bool SendProcessEventToServer(std::string URL, std::string header, std::string jsonData);

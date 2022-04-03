@@ -12,4 +12,5 @@
 #include "ProcessNotification.h"
 #include "misc.h"
 #include"..\common\CommonWithUser.h"
+#include"..\common\curl\curl.h"
 
