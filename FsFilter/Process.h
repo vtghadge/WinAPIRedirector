@@ -17,6 +17,16 @@ typedef struct _RUNNING_PROCESS_INFO
 
 }RUNNING_PROCESS_INFO, *PRUNNING_PROCESS_INFO;
 
+typedef struct _RUNNING_PROCESS_TABLE
+{
+	RTL_GENERIC_TABLE		RunningProcessTable;
+	ERESOURCE				RunningProcessTableLock;
+	DWORD					dwEntryCount;
+	NPAGED_LOOKASIDE_LIST	RunningProcessInfoList;
+	BOOLEAN					bIsTableInitialized;
+
+}RUNNING_PROCESS_TABLE, *PRUNNING_PROCESS_TABLE;
+
 //
 // Routines
 //
@@ -40,6 +50,43 @@ void OnProcessTerminated(
 	PEPROCESS Process,
 	HANDLE ProcessId
 );
+
+NTSTATUS InitRunningProcessTable();
+
+NTSTATUS DeInitRunningProcessTable();
+
+RTL_GENERIC_COMPARE_RESULTS
+RunningProcessCompareRoutine(
+	_In_ RTL_GENERIC_TABLE  *Table,
+	_In_ PVOID  FirstStruct,
+	_In_ PVOID  SecondStruct
+);
+
+PVOID
+RunningProcessAllocateRoutine(
+	_In_ RTL_GENERIC_TABLE  *Table,
+	_In_ CLONG  ByteSize
+);
+
+VOID
+RunningProcessFreeRoutine(
+	_In_ RTL_GENERIC_TABLE  *Table,
+	_In_ PVOID  Buffer
+);
+
+NTSTATUS AddElementInRunningProcessTable(PRUNNING_PROCESS_INFO pProcessInfo);
+
+NTSTATUS RemoveElementFromRunningProcessTable(HANDLE hProcessId);
+
+BOOLEAN CheckIfEntryPresentInRunningProcessTable(HANDLE hProcessId);
+
+BOOLEAN GetProcessPathFromRunningProcessTable(HANDLE hProcessId, PUNICODE_STRING pusDosProcessPath);
+
+BOOLEAN GetProcessInfoFromRunningProcessTable(HANDLE hProcessId, RUNNING_PROCESS_INFO* pRunningProcessInfo);
+
+NTSTATUS RemoveAllEntriesFromRunningProcessTable();
+
+NTSTATUS GetProcessFlags(HANDLE hPID, DWORD *pdwProcessFlags);
 
 NTSTATUS AllocateUnicodeString(_In_ POOL_TYPE PoolType, _In_ ULONG ulStringSize, _Out_ PUNICODE_STRING pUniStr);
 void FreeUnicodeString(_Pre_notnull_ PUNICODE_STRING pUniStr);
